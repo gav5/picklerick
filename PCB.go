@@ -1,6 +1,6 @@
 package main
 
-// PCB - (aka Process Control Block) used to represent process execution
+// PCB (aka Process Control Block) used to represent process execution
 // also used to facilitate CPU reassignment during context switching
 type PCB struct {
 	// cpuid: any

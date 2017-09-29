@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-// Register - represents a single register on the CPU
+// Register represents a single 32-bit register on the CPU
 type Register uint32
 
 func (r Register) String() string {

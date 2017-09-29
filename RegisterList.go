@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// RegisterList - list of registers used by the CPU
+// RegisterList is a list of general-purpose registers used by the CPU
 type RegisterList [16]Register
 
 func (rl RegisterList) String() string {
