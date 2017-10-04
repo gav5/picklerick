@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"./instrDecode"
 )
 
 func main() {
@@ -31,13 +33,7 @@ func main() {
 		"0x92000000",
 	}
 	for index, str := range prog {
-		r, err := makeInstructionComponents(str)
-		if err != nil {
-			fmt.Printf("error: %v\n", err)
-			return
-		}
-
-		instr, err := r.decode()
+		instr, err := instrDecode.FromHexStr(str)
 		if err != nil {
 			fmt.Printf("error: %v\n", err)
 			return
