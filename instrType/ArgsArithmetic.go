@@ -24,5 +24,5 @@ func (args Args) ArithmeticFormat() ArgsArithmetic {
 
 // ASM returns the representation in assembly language
 func (args ArgsArithmetic) ASM() string {
-	return fmt.Sprintf("%s %s %s", args.Source1.ASM(), args.Source2.ASM(), args.Destination.ASM())
+	return fmt.Sprintf("%s %s %s", args.Source1.ASM(), args.Destination.ASM(), args.Source2.ASM())
 }

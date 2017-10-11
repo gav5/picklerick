@@ -21,7 +21,7 @@ func (i SLT) Exec(pcb proc.PCB) proc.PCB {
 
 // ASM returns the representation in assembly language
 func (i SLT) ASM() string {
-	return fmt.Sprintf("SLT %s", i.args.ASM())
+	return fmt.Sprintf("SLT %s %s %s", i.args.Destination.ASM(), i.args.Source1.ASM(), i.args.Source2.ASM())
 }
 
 // MakeSLT makes an SLT instruction for the given args

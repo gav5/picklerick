@@ -20,7 +20,7 @@ func (i LW) Exec(pcb proc.PCB) proc.PCB {
 
 // ASM returns the representation in assembly language
 func (i LW) ASM() string {
-	return fmt.Sprintf("LW %s", i.args.ASM())
+	return fmt.Sprintf("LW %s %s(%s)", i.args.Destination.ASM(), i.args.Address.Dec(), i.args.Base.ASM())
 }
 
 // MakeLW makes an LW instruction for the given args

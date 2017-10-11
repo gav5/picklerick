@@ -20,7 +20,10 @@ func (i ST) Exec(pcb proc.PCB) proc.PCB {
 
 // ASM returns the representation in assembly language
 func (i ST) ASM() string {
-	return fmt.Sprintf("ST %s", i.args.ASM())
+	if i.args.Base == 0x0 {
+		return fmt.Sprintf("ST %s %s", i.args.Destination.ASM(), i.args.Address.Dec())
+	}
+	return fmt.Sprintf("ST (%s) %s", i.args.Destination.ASM(), i.args.Base.ASM())
 }
 
 // MakeST makes an ST instruction for the given args
