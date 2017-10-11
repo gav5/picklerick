@@ -13,9 +13,11 @@ func ParseFile(filename string) ([]Program, error) {
 	if fileErr != nil {
 		return nil, fileErr
 	}
-	// fileRe := regexp.MustCompile("(?mi)// *JOB ([0-9A-F]{1,2}) ([0-9A-F]{1,2}) ([0-9A-F]{1,2})\n((?:0x[0-9a-fA-F]{8}\n)+)// *DATA ([0-9A-F]{1,2}) ([0-9a-fA-F]{1,2}) ([0-9a-fA-F]{1,2})\n((?:0x[0-9A-F]{8}\n)+)// *END")
-	fileRe := regexp.MustCompile("(?mi)// *job ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8}[\n\r]+)+)// *data ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8}[\n\r]+)+)// *")
-	matches := fileRe.FindAllStringSubmatch(string(content), -1)
+	return parseContent(string(content))
+}
+
+func parseContent(content string) ([]Program, error) {
+	matches := matchesForContent(content)
 	programs := make([]Program, len(matches))
 	for index, m := range matches {
 		p, perr := parseProgram(m)
@@ -25,6 +27,12 @@ func ParseFile(filename string) ([]Program, error) {
 		programs[index] = p
 	}
 	return programs, nil
+}
+
+func matchesForContent(content string) [][]string {
+	fileRe := regexp.MustCompile("(?mi)// *job ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8} *[\n\r]+)+)// *data ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8} *[\n\r]+)+)// *end")
+	matches := fileRe.FindAllStringSubmatch(content, -1)
+	return matches
 }
 
 func parseProgram(matchData []string) (Program, error) {
