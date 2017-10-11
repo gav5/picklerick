@@ -1,7 +1,7 @@
 package proc
 
 // Status describes the status of a given process
-type Status int
+type Status uint8
 
 const (
 	// New describes a fresh, newly-created process

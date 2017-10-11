@@ -1,24 +1,40 @@
 package proc
 
-import "../cpu"
+import (
+	"../cpu"
+	"../reg"
+)
 
 // PCB (aka Process Control Block) used to represent process execution
 // also used to facilitate CPU reassignment during context switching
 type PCB struct {
-	// cpuid: any
-	// programCounter: any
-	state cpu.State
-	// codeSize: any
-	// registers: any
+
+	// CPUID is used to describe the CPU the process is being run on
+	CPUID cpu.ID
+
+	// ProgramCounter (PC) describes where the program is at in execution
+	ProgramCounter reg.Storage
+
+	// State contains the operational state of the CPU
+	State cpu.State
+
+	// CodeSize indicates the size of the code for the given process
+	CodeSize uint8
+
+	// Registers contains the list of standard CPU registers
+	// (these are manipulated by instructions for general computational purposes)
+	Registers reg.List
+
 	// schedule: any
 	// accounts: any
 	// memories: any
 	// progeny: any
 	// ptr: any
 	// resources: any
-	// Determines the current status of the process
+
+	// Status describes the current status of the process
 	// (ex: if it is running, waiting, etc)
-	status Status
+	Status Status
 
 	// statusInfo: any
 	// priority: any
