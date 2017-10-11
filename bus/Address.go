@@ -10,7 +10,7 @@ type Address uint32
 
 // Hex returns the hexidecimal (base-16) string representation
 func (addr Address) Hex() string {
-	return fmt.Sprintf("%#08x", uint32(addr))
+	return fmt.Sprintf("0x%08X", uint32(addr))
 }
 
 // Dec returns the decimal (base-10) string representation
