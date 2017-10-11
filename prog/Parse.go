@@ -100,7 +100,3 @@ func parseData(matchData []string) (Data, error) {
 		DataBlock:        dataBlock,
 	}, nil
 }
-
-func parseInstruction(instrHex string) (uint32, error) {
-	return util.HexExtractFixed32(instrHex)
-}
