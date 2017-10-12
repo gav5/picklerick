@@ -1,34 +1,46 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"log"
 
-	"./instrDecode"
+	"./config"
 	"./prog"
 )
 
 func main() {
-	filename := os.Args[1]
-	fmt.Println("picklerick OS")
-	fmt.Printf("filename: %s\n", filename)
-	fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-	pAry, pErr := prog.ParseFile(filename)
-	if pErr != nil {
-		fmt.Printf("error: %v\n", pErr)
+	var err error
+	var sharedConfig config.Config
+	var programArray []prog.Program
+
+	// load app configuration
+	if sharedConfig, err = config.Shared(); err != nil {
+		log.Fatalf("error extracting shared configuration: %v", err)
 		return
 	}
-	fmt.Printf("~> Got %d programs!\n", len(pAry))
-	for _, p := range pAry {
-		fmt.Printf("Job ID: %d\n", p.Job.ID)
-		for index, iraw := range p.Job.Instructions {
-			instr, iErr := instrDecode.FromUint32(iraw)
-			if iErr != nil {
-				fmt.Printf("error: %v\n", iErr)
-				return
-			}
-			fmt.Printf("%08X  | %04X |  %s\n", iraw, (index * 4), instr.ASM())
+
+	// introduce program, display configuration
+	log.Println("picklerick OS")
+	log.Printf("program file: %s\n", sharedConfig.Progfile)
+
+	// parse file and display assembly code for each job
+	if programArray, err = prog.ParseFile(sharedConfig.Progfile); err != nil {
+		log.Fatalf("error parsing program file: %v\n", err)
+		return
+	}
+
+	// load the ASM output file (if applicable)
+	if len(sharedConfig.ASMFile) > 0 {
+		log.Printf("ASM output file: %s", sharedConfig.ASMFile)
+		f, err := prog.MakeASMFile(sharedConfig.ASMFile)
+		if err != nil {
+			log.Fatalf("error opening ASM file: %v\n", err)
+			return
 		}
-		fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+		if err = f.WritePrograms(programArray, sharedConfig.Progfile); err != nil {
+			log.Fatalf("error writing to ASM file: %v", err)
+		}
+		if err = f.Close(); err != nil {
+			log.Fatalf("error closing ASM file: %v\n", err)
+		}
 	}
 }
