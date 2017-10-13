@@ -27,7 +27,9 @@ type PCB struct {
 
 	// schedule: any
 	// accounts: any
-	// memories: any
+
+	Memories Memories
+
 	// progeny: any
 	// ptr: any
 	// resources: any

@@ -4,10 +4,16 @@ import (
 	"log"
 
 	"./config"
+	"./cpu"
+	"./disp"
 	"./prog"
+	"./ram"
 )
 
 func main() {
+	ram.SetData(0x01, 0xFFFFFFFF)
+	ram.SetData(0x02, 0xAAAAAAAA)
+
 	var err error
 	var sharedConfig config.Config
 	var programArray []prog.Program
@@ -28,19 +34,12 @@ func main() {
 		return
 	}
 
+	cpus := []cpu.CPU{
+		cpu.CPU{ID: 1, State: cpu.State{}},
+	}
+
 	// load the ASM output file (if applicable)
-	if len(sharedConfig.ASMFile) > 0 {
-		log.Printf("ASM output file: %s", sharedConfig.ASMFile)
-		f, err := prog.MakeASMFile(sharedConfig.ASMFile)
-		if err != nil {
-			log.Fatalf("error opening ASM file: %v\n", err)
-			return
-		}
-		if err = f.WritePrograms(programArray, sharedConfig.Progfile); err != nil {
-			log.Fatalf("error writing to ASM file: %v", err)
-		}
-		if err = f.Close(); err != nil {
-			log.Fatalf("error closing ASM file: %v\n", err)
-		}
+	if len(sharedConfig.Outdir) > 0 {
+		disp.MakeAll(sharedConfig.Outdir, programArray, cpus)
 	}
 }

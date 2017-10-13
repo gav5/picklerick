@@ -3,7 +3,7 @@ package config
 // Config describes the configration of the application
 type Config struct {
 	Progfile string `json:"progfile"`
-	ASMFile  string `json:"asmfile"`
+	Outdir   string `json:"outdir"`
 }
 
 // private global variable for the config value

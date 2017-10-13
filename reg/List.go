@@ -12,7 +12,10 @@ func (rl List) String() string {
 	var buffer bytes.Buffer
 
 	for index, reg := range rl {
-		buffer.WriteString(fmt.Sprintf("r%d:\t%v\n", index, reg))
+		if index > 0 {
+			buffer.WriteString(" | ")
+		}
+		buffer.WriteString(fmt.Sprintf("r%d:%v", index, reg))
 	}
 	return buffer.String()
 }
