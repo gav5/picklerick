@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // MOVI transfers address/data directly into a register
@@ -13,9 +13,8 @@ type MOVI struct {
 }
 
 // Exec runs the given MOVI instruction
-func (i MOVI) Exec(pcb proc.PCB) proc.PCB {
+func (i MOVI) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

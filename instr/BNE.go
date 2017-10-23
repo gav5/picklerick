@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // BNE branches to an address when the content of the branch and destination registers
@@ -14,9 +14,8 @@ type BNE struct {
 }
 
 // Exec runs the BNE instruction
-func (i BNE) Exec(pcb proc.PCB) proc.PCB {
+func (i BNE) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

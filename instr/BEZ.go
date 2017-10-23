@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // BEZ branches to an address when the contents of the branch register equals zero
@@ -13,9 +13,8 @@ type BEZ struct {
 }
 
 // Exec run the BEZ instruction
-func (i BEZ) Exec(pcb proc.PCB) proc.PCB {
+func (i BEZ) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

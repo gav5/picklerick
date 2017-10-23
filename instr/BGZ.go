@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // BGZ branches to an address when the contents of the branch register is greater than 0
@@ -13,9 +13,8 @@ type BGZ struct {
 }
 
 // Exec runs the BGZ instruction
-func (i BGZ) Exec(pcb proc.PCB) proc.PCB {
+func (i BGZ) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

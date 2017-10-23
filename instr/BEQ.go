@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // BEQ branches to an address when the contents of the branch and destination registers
@@ -14,9 +14,8 @@ type BEQ struct {
 }
 
 // Exec runs the BEQ instruction
-func (i BEQ) Exec(pcb proc.PCB) proc.PCB {
+func (i BEQ) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

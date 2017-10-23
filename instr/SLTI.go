@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // SLTI sets the destination register to 1 if the first source register is less than a
@@ -14,9 +14,8 @@ type SLTI struct {
 }
 
 // Exec runs the given SLTI instruction
-func (i SLTI) Exec(pcb proc.PCB) proc.PCB {
+func (i SLTI) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

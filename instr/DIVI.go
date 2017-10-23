@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // DIVI divides a data value directly with the content of a register
@@ -13,9 +13,10 @@ type DIVI struct {
 }
 
 // Exec runs the DIVI instruction
-func (i DIVI) Exec(pcb proc.PCB) proc.PCB {
-	// TODO: make this actually do what it's supposed to do
-	return pcb
+func (i DIVI) Exec(state *cpuType.State) {
+	base := state.GetReg(i.args.Base)
+	dest := state.GetReg(i.args.Destination)
+	state.SetReg(i.args.Destination, base/dest)
 }
 
 // ASM returns the representation in assembly language

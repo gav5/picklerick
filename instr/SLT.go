@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // SLT sets the destination register to 1 if the first source register is less than the
@@ -14,9 +14,8 @@ type SLT struct {
 }
 
 // Exec runs the given SLT instruction
-func (i SLT) Exec(pcb proc.PCB) proc.PCB {
+func (i SLT) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

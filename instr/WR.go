@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // WR writes the content of the accumulator into the O/P buffer
@@ -13,9 +13,10 @@ type WR struct {
 }
 
 // Exec runs the given WR instruction
-func (i WR) Exec(pcb proc.PCB) proc.PCB {
-	// TODO: make this actually do what it's supposed to do
-	return pcb
+func (i WR) Exec(state *cpuType.State) {
+	addr := uint32(i.args.Address)
+	r1 := state.GetReg(i.args.Register1)
+	state.SetAddr(addr, uint32(r1))
 }
 
 // ASM returns the representation in assembly language

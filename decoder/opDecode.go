@@ -1,4 +1,4 @@
-package instrDecode
+package decoder
 
 import (
 	"fmt"

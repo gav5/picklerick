@@ -5,7 +5,9 @@ import (
 
 	"./config"
 	"./cpu"
+	"./cpuType"
 	"./disp"
+	"./proc"
 	"./prog"
 	"./ram"
 )
@@ -34,12 +36,27 @@ func main() {
 		return
 	}
 
-	cpus := []cpu.CPU{
-		cpu.CPU{ID: 1, State: cpu.State{}},
+	c := cpu.State{}
+
+	if len(sharedConfig.Outdir) > 0 {
+		disp.CleanOutDir(sharedConfig.Outdir)
+	}
+
+	for _, p := range programArray {
+		pcb := proc.MakePCB(p)
+		c.ContextSwitch(pcb)
+		for !c.ShouldHalt {
+			c.Next()
+		}
+		if len(sharedConfig.Outdir) > 0 {
+			disp.ProgramOutputFile(sharedConfig.Outdir, cpuType.CPU{ID: 1, State: cpuType.State(c)})
+		}
 	}
 
 	// load the ASM output file (if applicable)
-	if len(sharedConfig.Outdir) > 0 {
-		disp.MakeAll(sharedConfig.Outdir, programArray, cpus)
-	}
+	// if len(sharedConfig.Outdir) > 0 {
+	// 	disp.MakeAll(sharedConfig.Outdir, programArray, []cpuType.CPU{
+	// 		cpuType.CPU{ID: 1, State: cpuType.State(c)},
+	// 	})
+	// }
 }

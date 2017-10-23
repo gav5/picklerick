@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // MUL multiplies the content of two source registers into the destination register
@@ -13,9 +13,10 @@ type MUL struct {
 }
 
 // Exec runs the given MUL instruction
-func (i MUL) Exec(pcb proc.PCB) proc.PCB {
-	// TODO: make this actually do what it's supposed to do
-	return pcb
+func (i MUL) Exec(state *cpuType.State) {
+	source1 := state.GetReg(i.args.Source1)
+	source2 := state.GetReg(i.args.Source2)
+	state.SetReg(i.args.Destination, source1*source2)
 }
 
 // ASM returns the representation in assembly language

@@ -1,10 +1,10 @@
 package instrType
 
-import "../proc"
+import "../cpuType"
 
 // Base describes the base requirements for a CPU instruction
 type Base interface {
-	Exec(pcb proc.PCB) proc.PCB
+	Exec(state *cpuType.State)
 	// ASM returns the representation in assembly language
 	ASM() string
 }

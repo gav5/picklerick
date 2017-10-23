@@ -6,15 +6,16 @@ import (
 	"os"
 	"path"
 
-	"../cpu"
+	"../cpuType"
+	"../decoder"
 	"../prog"
 	"../ram"
 )
 
-var dirs = []string{"asm", "ram", "cpu"}
+var dirs = []string{"asm", "ram", "cpu", "prog"}
 
 // MakeAll makes all the output files for display purposes
-func MakeAll(outdir string, programs []prog.Program, cpus []cpu.CPU) error {
+func MakeAll(outdir string, programs []prog.Program, cpus []cpuType.CPU) error {
 	if err := CleanOutDir(outdir); err != nil {
 		return err
 	}
@@ -57,7 +58,7 @@ func AssemblyFile(outdir string, program prog.Program) error {
 	if err != nil {
 		return err
 	}
-	if err := program.WriteASM(file); err != nil {
+	if err := decoder.ProgramWriteASM(file, program); err != nil {
 		return err
 	}
 	return file.Close()
@@ -78,7 +79,7 @@ func PhysicalMemoryFile(outdir string) error {
 }
 
 // CPUFile prints the cpu state to the appropriate file
-func CPUFile(outdir string, c cpu.CPU) error {
+func CPUFile(outdir string, c cpuType.CPU) error {
 	filename := fmt.Sprintf("%d.txt", c.ID)
 	filepath := path.Join(outdir, "cpu", filename)
 	log.Printf("Generating cpu state dump: %s", filepath)
@@ -87,6 +88,36 @@ func CPUFile(outdir string, c cpu.CPU) error {
 		return err
 	}
 	if err := c.State.Write(file); err != nil {
+		return err
+	}
+	return file.Close()
+}
+
+// ProgramOutputFile prints the output of a given program
+func ProgramOutputFile(outdir string, c cpuType.CPU) error {
+	filename := fmt.Sprintf("%d.txt", c.State.Program.Job.ID)
+	filepath := path.Join(outdir, "prog", filename)
+	log.Printf("Generating prog state dump: %s", filepath)
+	file, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(file, "-- Program --"); err != nil {
+		return err
+	}
+	if err := decoder.ProgramWriteASM(file, c.State.Program); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(file, "\n-- CPU State --"); err != nil {
+		return err
+	}
+	if err := c.State.Write(file); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(file, "\n-- Memory Dump --"); err != nil {
+		return err
+	}
+	if err := ram.FprintPhysicalMemory(file); err != nil {
 		return err
 	}
 	return file.Close()

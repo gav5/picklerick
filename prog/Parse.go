@@ -7,6 +7,10 @@ import (
 	"../util"
 )
 
+const (
+	contentRegexp = "(?mi)// *job ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8} *[\n\r]+)+)// *data ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8} *[\n\r]+){44})// *end"
+)
+
 // ParseFile parses a file and returns a Program
 func ParseFile(filename string) ([]Program, error) {
 	content, fileErr := ioutil.ReadFile(filename)
@@ -30,7 +34,7 @@ func parseContent(content string) ([]Program, error) {
 }
 
 func matchesForContent(content string) [][]string {
-	fileRe := regexp.MustCompile("(?mi)// *job ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8} *[\n\r]+)+)// *data ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2}) ([[:xdigit:]]{1,2})[\n\r]+((?:0x[[:xdigit:]]{8} *[\n\r]+)+)// *end")
+	fileRe := regexp.MustCompile(contentRegexp)
 	matches := fileRe.FindAllStringSubmatch(content, -1)
 	return matches
 }
@@ -93,10 +97,12 @@ func parseData(matchData []string) (Data, error) {
 	if dataBlockErr != nil {
 		return Data{}, dataBlockErr
 	}
+	var dataBlockAry [44]uint32
+	copy(dataBlockAry[:], dataBlock[:44])
 	return Data{
 		InputBufferSize:  inSize,
 		OutputBufferSize: outSize,
 		TempBufferSize:   tempSize,
-		DataBlock:        dataBlock,
+		DataBlock:        dataBlockAry,
 	}, nil
 }

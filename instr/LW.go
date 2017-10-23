@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // LW loads the content of an address into a register
@@ -13,9 +13,8 @@ type LW struct {
 }
 
 // Exec runs the given LW instruction
-func (i LW) Exec(pcb proc.PCB) proc.PCB {
+func (i LW) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

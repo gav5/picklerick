@@ -1,4 +1,4 @@
-package instrDecode
+package decoder
 
 import (
 	"testing"
@@ -39,7 +39,7 @@ var fromUint32Tests = []struct {
 
 func TestFromUint32(t *testing.T) {
 	for _, tt := range fromUint32Tests {
-		val, err := FromUint32(tt.in)
+		val, err := InstrFromUint32(tt.in)
 
 		var asm string
 		if val != nil {

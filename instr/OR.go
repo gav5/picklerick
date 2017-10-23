@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // OR logical OR's the contents of the two source registers into a destination register
@@ -13,9 +13,10 @@ type OR struct {
 }
 
 // Exec runs the given OR instruction
-func (i OR) Exec(pcb proc.PCB) proc.PCB {
-	// TODO: make this actually do what it's supposed to do
-	return pcb
+func (i OR) Exec(state *cpuType.State) {
+	source1 := state.GetRegBool(i.args.Source1)
+	source2 := state.GetRegBool(i.args.Source2)
+	state.SetRegBool(i.args.Destination, source1 || source2)
 }
 
 // ASM returns the representation in assembly language

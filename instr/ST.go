@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // ST stores the content of a register into an address
@@ -13,9 +13,8 @@ type ST struct {
 }
 
 // Exec runs the given ST instruction
-func (i ST) Exec(pcb proc.PCB) proc.PCB {
+func (i ST) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

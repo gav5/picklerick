@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // SUB subtracts the contents of the two source registers into the destination register
@@ -13,9 +13,10 @@ type SUB struct {
 }
 
 // Exec runs the given SUB instruction
-func (i SUB) Exec(pcb proc.PCB) proc.PCB {
-	// TODO: make this actually do what it's supposed to do
-	return pcb
+func (i SUB) Exec(state *cpuType.State) {
+	source1 := state.GetReg(i.args.Source1)
+	source2 := state.GetReg(i.args.Source2)
+	state.SetReg(i.args.Destination, source1-source2)
 }
 
 // ASM returns the representation in assembly language

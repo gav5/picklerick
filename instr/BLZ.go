@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // BLZ branches to an address when the content of the branch register is less than 0
@@ -13,9 +13,8 @@ type BLZ struct {
 }
 
 // Exec runs the BLZ instruction
-func (i BLZ) Exec(pcb proc.PCB) proc.PCB {
+func (i BLZ) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

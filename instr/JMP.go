@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // JMP jumps to a specified location
@@ -13,9 +13,8 @@ type JMP struct {
 }
 
 // Exec runs the JMP instruction
-func (i JMP) Exec(pcb proc.PCB) proc.PCB {
+func (i JMP) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language

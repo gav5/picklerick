@@ -3,8 +3,9 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
+	"../reg"
 )
 
 // RD reads the content of the I/P buffer into the accumulator
@@ -13,9 +14,10 @@ type RD struct {
 }
 
 // Exec runs the given RD instruction
-func (i RD) Exec(pcb proc.PCB) proc.PCB {
-	// TODO: make this actually do what it's supposed to do
-	return pcb
+func (i RD) Exec(state *cpuType.State) {
+	addr := uint32(i.args.Address)
+	val := reg.Storage(state.GetAddr(addr))
+	state.SetReg(i.args.Register1, val)
 }
 
 // ASM returns the representation in assembly language

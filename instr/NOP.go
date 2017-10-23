@@ -1,8 +1,8 @@
 package instr
 
 import (
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // NOP does nothing and moves to the next instruction
@@ -11,9 +11,8 @@ type NOP struct {
 }
 
 // Exec runs the given NOP instruction
-func (i NOP) Exec(pcb proc.PCB) proc.PCB {
-	// this does nothing, so return the same state
-	return pcb
+func (i NOP) Exec(state *cpuType.State) {
+	// this does nothing, so do nothing!
 }
 
 // ASM returns the representation in assembly language

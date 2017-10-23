@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var physicalMemory = make([]Word, MemorySize)
+var physicalMemory = make([]uint32, MemorySize)
 
 // PrintPhysicalMemory prints the contents of the physical memory to Stdout
 func PrintPhysicalMemory() error {

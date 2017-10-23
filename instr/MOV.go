@@ -3,8 +3,8 @@ package instr
 import (
 	"fmt"
 
+	"../cpuType"
 	"../instrType"
-	"../proc"
 )
 
 // MOV transfers the contents of one register into another
@@ -13,9 +13,8 @@ type MOV struct {
 }
 
 // Exec runs the given MOV instruction
-func (i MOV) Exec(pcb proc.PCB) proc.PCB {
+func (i MOV) Exec(state *cpuType.State) {
 	// TODO: make this actually do what it's supposed to do
-	return pcb
 }
 
 // ASM returns the representation in assembly language
