@@ -14,7 +14,12 @@ type BLZ struct {
 
 // Exec runs the BLZ instruction
 func (i BLZ) Exec(state *cpuType.State) {
-	// TODO: make this actually do what it's supposed to do
+	base := state.GetReg(i.args.Base)
+	// NOTE: this should never happen because this is an unsigned value!!
+	if base < 0 {
+		addr := uint32(i.args.Address)
+		state.SetPC(addr)
+	}
 }
 
 // ASM returns the representation in assembly language

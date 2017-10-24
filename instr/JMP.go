@@ -14,7 +14,8 @@ type JMP struct {
 
 // Exec runs the JMP instruction
 func (i JMP) Exec(state *cpuType.State) {
-	// TODO: make this actually do what it's supposed to do
+	pc := uint32(i.args.Address)
+	state.SetPC(pc)
 }
 
 // ASM returns the representation in assembly language

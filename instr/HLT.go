@@ -11,7 +11,7 @@ type HLT struct {
 
 // Exec runs the HLT instruction
 func (i HLT) Exec(state *cpuType.State) {
-	// TODO: make this actually do what it's supposed to do
+	state.Halt()
 }
 
 // ASM returns the representation in assembly language

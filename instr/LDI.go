@@ -5,6 +5,7 @@ import (
 
 	"../cpuType"
 	"../instrType"
+	"../reg"
 )
 
 // LDI loads some data/address directly to the contents of a register
@@ -14,7 +15,13 @@ type LDI struct {
 
 // Exec runs the given LDI instruction
 func (i LDI) Exec(state *cpuType.State) {
-	// TODO: make this actually do what it's supposed to do
+	addr := uint32(i.args.Address)
+	if addr == 0 {
+		base := state.GetReg(i.args.Base)
+		state.SetReg(i.args.Destination, base)
+	} else {
+		state.SetReg(i.args.Destination, reg.Storage(addr))
+	}
 }
 
 // ASM returns the representation in assembly language

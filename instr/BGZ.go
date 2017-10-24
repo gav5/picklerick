@@ -14,7 +14,11 @@ type BGZ struct {
 
 // Exec runs the BGZ instruction
 func (i BGZ) Exec(state *cpuType.State) {
-	// TODO: make this actually do what it's supposed to do
+	base := state.GetReg(i.args.Base)
+	if base > 0 {
+		addr := uint32(i.args.Address)
+		state.SetPC(addr)
+	}
 }
 
 // ASM returns the representation in assembly language
