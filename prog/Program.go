@@ -2,6 +2,7 @@ package prog
 
 import (
 	"encoding/binary"
+	"io"
 )
 
 var (
@@ -45,4 +46,9 @@ func (p *Program) SetWords(words []uint32) error {
 
 func (p Program) binWordSize() uint8 {
 	return p.Job.binWordSize() + p.Data.binWordSize()
+}
+
+// WriteASM writes the assembly instructions to the given file writer
+func (p Program) WriteASM(w io.Writer) error {
+	return p.Job.WriteASM(w)
 }
