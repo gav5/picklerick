@@ -1,18 +1,17 @@
 package ivm
 
 const (
-	// RAMNumWords is the number of words in the virtual machine RAM.
-	RAMNumWords = 1024
+	// DiskNumWords is the number of words in the virtual machine disk.
+	DiskNumWords = 2048
 
-	// RAMNumFrames is the number of frames in the virtual machine RAM.
-	RAMNumFrames = RAMNumWords / FrameSize
+	// DiskNumFrames is the number of frames in the virtual machine disk.
+	DiskNumFrames = DiskNumWords / FrameSize
 )
 
-// IRAM is the kernel interface into a virtual machine random access memory.
+// IDisk is the kernel interface into a virtual machine disk storage drive.
 // (this is because vm uses the kernel, so we have to avoid circular dependencies)
 // (this also helps regulate the access of the vm by the kernel to avoid abuse)
-type IRAM interface {
-
+type IDisk interface {
 	// Addresses as gateways to words
 	AddressFetchWord(Address) Word
 	AddressWriteWord(Address, Word)

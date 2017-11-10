@@ -10,6 +10,6 @@ func ContextSwitch(vm ivm.IVM, coreNum uint8, pcb *PCB) {
 	for i, reg := range pcb.Registers {
 		vm.SetRegisterWord(coreNum, ivm.RegisterDesignation(i), reg)
 	}
-	// TODO: Undo the halt (it's likely the program may have halted)
+	vm.ResetCore(coreNum)
 	// TODO: Move the correct program from disk into RAM
 }

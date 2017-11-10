@@ -1,21 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"./config"
-	"./cpu"
-	"./cpuType"
-	"./disp"
-	"./proc"
+	"./kernel"
 	"./prog"
-	"./ram"
+	"./vm"
 )
 
 func main() {
-	ram.SetData(0x01, 0xFFFFFFFF)
-	ram.SetData(0x02, 0xAAAAAAAA)
-
 	var err error
 	var sharedConfig config.Config
 	var programArray []prog.Program
@@ -26,32 +21,46 @@ func main() {
 		return
 	}
 
-	// introduce program, display configuration
-	log.Println("picklerick OS")
-	log.Printf("program file: %s\n", sharedConfig.Progfile)
-
 	// parse file and display assembly code for each job
 	if programArray, err = prog.ParseFile(sharedConfig.Progfile); err != nil {
 		log.Fatalf("error parsing program file: %v\n", err)
 		return
 	}
 
-	c := cpu.State{}
+	// introduce program, display configuration
+	log.Println("picklerick OS")
+	log.Printf("program file: %s\n", sharedConfig.Progfile)
+	fmt.Println()
 
-	if len(sharedConfig.Outdir) > 0 {
-		disp.CleanOutDir(sharedConfig.Outdir)
-	}
+	virtualMachine := vm.MakeVM()
+	kernel.LoadPrograms(&virtualMachine, programArray)
 
-	for _, p := range programArray {
-		pcb := proc.MakePCB(p)
-		c.ContextSwitch(pcb)
-		for !c.ShouldHalt {
-			c.Next()
-		}
-		if len(sharedConfig.Outdir) > 0 {
-			disp.ProgramOutputFile(sharedConfig.Outdir, cpuType.CPU{ID: 1, State: cpuType.State(c)})
-		}
-	}
+	fmt.Print("RAM Dump:\n")
+	_ = virtualMachine.RAM.Print()
+	fmt.Print("\n")
+
+	fmt.Print("Disk Dump:\n")
+	_ = virtualMachine.Disk.Print()
+	fmt.Print("\n")
+
+	// disp.RunTask(virtualMachine)
+
+	// c := cpu.State{}
+
+	// if len(sharedConfig.Outdir) > 0 {
+	// 	disp.CleanOutDir(sharedConfig.Outdir)
+	// }
+
+	// for _, p := range programArray {
+	// 	pcb := proc.MakePCB(p)
+	// 	c.ContextSwitch(pcb)
+	// 	for !c.ShouldHalt {
+	// 		c.Next()
+	// 	}
+	// 	if len(sharedConfig.Outdir) > 0 {
+	// 		disp.ProgramOutputFile(sharedConfig.Outdir, cpuType.CPU{ID: 1, State: cpuType.State(c)})
+	// 	}
+	// }
 
 	// load the ASM output file (if applicable)
 	// if len(sharedConfig.Outdir) > 0 {

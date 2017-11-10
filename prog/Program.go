@@ -2,7 +2,8 @@ package prog
 
 import (
 	"encoding/binary"
-	"io"
+
+	"../vm/ivm"
 )
 
 var (
@@ -48,7 +49,16 @@ func (p Program) binWordSize() uint8 {
 	return p.Job.binWordSize() + p.Data.binWordSize()
 }
 
-// WriteASM writes the assembly instructions to the given file writer
-func (p Program) WriteASM(w io.Writer) error {
-	return p.Job.WriteASM(w)
+// Frames gets the representative frames for the given program.
+func (p Program) Frames() ([]ivm.Frame, error) {
+	vals, err := p.GetWords()
+	if err != nil {
+		return nil, err
+	}
+	return ivm.FrameArrayFromUint32Array(vals), nil
 }
+
+// WriteASM writes the assembly instructions to the given file writer
+// func (p Program) WriteASM(w io.Writer) error {
+// 	return p.Job.WriteASM(w)
+// }

@@ -19,6 +19,27 @@ type IVM interface {
 	RegisterBool(uint8, RegisterDesignation) bool
 	SetRegisterBool(uint8, RegisterDesignation, bool)
 
-	// Need the same interfaces used to get to RAM
-	IRAM
+	// Working with RAM
+	RAMAddressFetchWord(Address) Word
+	RAMAddressWriteWord(Address, Word)
+	RAMAddressFetchUint32(Address) uint32
+	RAMAddressWriteUint32(Address, uint32)
+	RAMAddressFetchInt32(Address) int32
+	RAMAddressWriteInt32(Address, int32)
+	RAMAddressFetchBool(Address) bool
+	RAMAddressWriteBool(Address, bool)
+	RAMFrameFetch(FrameNumber) Frame
+	RAMFrameWrite(FrameNumber, Frame)
+
+	// Working with Disk
+	DiskAddressFetchWord(Address) Word
+	DiskAddressWriteWord(Address, Word)
+	DiskAddressFetchUint32(Address) uint32
+	DiskAddressWriteUint32(Address, uint32)
+	DiskAddressFetchInt32(Address) int32
+	DiskAddressWriteInt32(Address, int32)
+	DiskAddressFetchBool(Address) bool
+	DiskAddressWriteBool(Address, bool)
+	DiskFrameFetch(FrameNumber) Frame
+	DiskFrameWrite(FrameNumber, Frame)
 }

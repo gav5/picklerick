@@ -1,6 +1,9 @@
 package vm
 
-import "./ivm"
+import (
+	"../disp"
+	"./ivm"
+)
 
 // NumCores is the number of cores in the virtual machine.
 const NumCores = 4
@@ -11,6 +14,43 @@ type VM struct {
 	Cores [NumCores]Core
 	RAM   RAM
 	Disk  Disk
+}
+
+const iter = 1000000
+
+// MakeVM makes a new virtual machine.
+func MakeVM() VM {
+	return VM{
+		Clock: 0x00000000,
+		Cores: [NumCores]Core{
+			MakeCore(0),
+			MakeCore(1),
+			MakeCore(2),
+			MakeCore(3),
+		},
+		RAM:  MakeRAM(),
+		Disk: Disk{},
+	}
+}
+
+// Run runs the virtual machine.
+func (vm *VM) Run(progress chan disp.Progress) {
+	go func() {
+		coreCh := make([]chan disp.Progress, NumCores)
+		// run each core in its own goroutine
+		for i, core := range vm.Cores {
+			core.Run(coreCh[i], vm)
+		}
+		for {
+		}
+		// for i := 0; i < iter/2; i++ {
+		// 	done <- disp.Progress{"Doing Thing (Part 1)", float32(i) / iter}
+		// }
+		// for i := iter / 2; i < iter; i++ {
+		// 	done <- disp.Progress{"Doing Thing (Part 2)", float32(i) / iter}
+		// }
+		// done <- disp.Progress{"Done!", 1.0}
+	}()
 }
 
 func (vm VM) instructionProxy(corenum uint8) ivm.InstructionProxy {
@@ -75,4 +115,104 @@ func (vm VM) RegisterBool(corenum uint8, regNum ivm.RegisterDesignation) bool {
 // SetRegisterBool sets the given register to the given bool value.
 func (vm *VM) SetRegisterBool(corenum uint8, regNum ivm.RegisterDesignation, val bool) {
 	vm.Cores[corenum].SetRegisterBool(regNum, val)
+}
+
+// RAMAddressFetchWord returns the word value at the given address.
+func (vm VM) RAMAddressFetchWord(addr ivm.Address) ivm.Word {
+	return vm.RAM.AddressFetchWord(addr)
+}
+
+// RAMAddressWriteWord writes the given word value to the given address.
+func (vm *VM) RAMAddressWriteWord(addr ivm.Address, val ivm.Word) {
+	vm.RAM.AddressWriteWord(addr, val)
+}
+
+// RAMAddressFetchUint32 returns the uint32 value at the given address.
+func (vm VM) RAMAddressFetchUint32(addr ivm.Address) uint32 {
+	return vm.RAM.AddressFetchUint32(addr)
+}
+
+// RAMAddressWriteUint32 writes the given uint32 value to the given address.
+func (vm *VM) RAMAddressWriteUint32(addr ivm.Address, val uint32) {
+	vm.RAM.AddressWriteUint32(addr, val)
+}
+
+// RAMAddressFetchInt32 returns the int32 value at the given address.
+func (vm VM) RAMAddressFetchInt32(addr ivm.Address) int32 {
+	return vm.RAM.AddressFetchInt32(addr)
+}
+
+// RAMAddressWriteInt32 writes the given int32 value to the given address.
+func (vm *VM) RAMAddressWriteInt32(addr ivm.Address, val int32) {
+	vm.RAM.AddressWriteInt32(addr, val)
+}
+
+// RAMAddressFetchBool returns the bool value at the given address.
+func (vm VM) RAMAddressFetchBool(addr ivm.Address) bool {
+	return vm.RAM.AddressFetchBool(addr)
+}
+
+// RAMAddressWriteBool writes the given bool value to the given address.
+func (vm *VM) RAMAddressWriteBool(addr ivm.Address, val bool) {
+	vm.RAM.AddressWriteBool(addr, val)
+}
+
+// RAMFrameFetch fetches the frame with the given frame number.
+func (vm VM) RAMFrameFetch(frameNum ivm.FrameNumber) ivm.Frame {
+	return vm.RAM.FrameFetch(frameNum)
+}
+
+// RAMFrameWrite writes the frame at the given frame number.
+func (vm *VM) RAMFrameWrite(frameNum ivm.FrameNumber, frame ivm.Frame) {
+	vm.RAM.FrameWrite(frameNum, frame)
+}
+
+// DiskAddressFetchWord returns the word value at the given address.
+func (vm VM) DiskAddressFetchWord(addr ivm.Address) ivm.Word {
+	return vm.Disk.AddressFetchWord(addr)
+}
+
+// DiskAddressWriteWord writes the given word value to the given address.
+func (vm *VM) DiskAddressWriteWord(addr ivm.Address, val ivm.Word) {
+	vm.Disk.AddressWriteWord(addr, val)
+}
+
+// DiskAddressFetchUint32 returns the uint32 value at the given address.
+func (vm VM) DiskAddressFetchUint32(addr ivm.Address) uint32 {
+	return vm.Disk.AddressFetchUint32(addr)
+}
+
+// DiskAddressWriteUint32 writes the given uint32 value to the given address.
+func (vm *VM) DiskAddressWriteUint32(addr ivm.Address, val uint32) {
+	vm.Disk.AddressWriteUint32(addr, val)
+}
+
+// DiskAddressFetchInt32 returns the int32 value at the given address.
+func (vm VM) DiskAddressFetchInt32(addr ivm.Address) int32 {
+	return vm.DiskAddressFetchInt32(addr)
+}
+
+// DiskAddressWriteInt32 writes the given int32 value to the given address.
+func (vm *VM) DiskAddressWriteInt32(addr ivm.Address, val int32) {
+	vm.DiskAddressWriteInt32(addr, val)
+}
+
+// DiskAddressFetchBool returns the bool value at the given address.
+func (vm VM) DiskAddressFetchBool(addr ivm.Address) bool {
+	return vm.Disk.AddressFetchBool(addr)
+}
+
+// DiskAddressWriteBool writes the given bool value to the given address.
+func (vm *VM) DiskAddressWriteBool(addr ivm.Address, val bool) {
+	vm.Disk.AddressWriteBool(addr, val)
+}
+
+// DiskFrameFetch fetches the frame with the given frame number.
+func (vm VM) DiskFrameFetch(frameNum ivm.FrameNumber) ivm.Frame {
+	return vm.Disk.FrameFetch(frameNum)
+}
+
+// DiskFrameWrite writes the frame at the given frame number.
+func (vm *VM) DiskFrameWrite(frameNum ivm.FrameNumber, frame ivm.Frame) {
+	vm.Disk.FrameWrite(frameNum, frame)
 }

@@ -3,11 +3,8 @@ package prog
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"io"
 
 	"../util"
-	"../vm"
 )
 
 // Job represents the job section of the program
@@ -61,14 +58,14 @@ func (j Job) binWordSize() uint8 {
 }
 
 // WriteASM writes the assembly instructions to the given file writer
-func (j Job) WriteASM(w io.Writer) error {
-	fmt.Fprintf(w, "Job ID: %d\n", j.ID)
-	for index, iraw := range j.Instructions {
-		instr, err := vm.DecodeInstruction(iraw)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(w, "%08X  | %04X |  %s\n", iraw, (index * 4), instr.Assembly())
-	}
-	return nil
-}
+// func (j Job) WriteASM(w io.Writer) error {
+// 	fmt.Fprintf(w, "Job ID: %d\n", j.ID)
+// 	for index, iraw := range j.Instructions {
+// 		instr, err := vm.DecodeInstruction(iraw)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		fmt.Fprintf(w, "%08X  | %04X |  %s\n", iraw, (index * 4), instr.Assembly())
+// 	}
+// 	return nil
+// }

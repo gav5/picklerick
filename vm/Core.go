@@ -1,14 +1,48 @@
 package vm
 
 import (
+	"fmt"
+
+	"../disp"
 	"./ivm"
 )
 
 // Core describes a CPU Core in the virtual machine.
 type Core struct {
+	CoreNum    uint8
 	PC         ivm.Address
 	Registers  [ivm.NumCoreRegisters]ivm.Word
 	ShouldHalt bool
+}
+
+// MakeCore makes a new core.
+func MakeCore(coreNum uint8) Core {
+	return Core{
+		CoreNum:    coreNum,
+		PC:         0x00000000,
+		Registers:  [ivm.NumCoreRegisters]ivm.Word{},
+		ShouldHalt: false,
+	}
+}
+
+// Run runs the core.
+func (c *Core) Run(progress chan disp.Progress, vm *VM) {
+	go func() {
+		for {
+			instructionRAW := vm.RAM.AddressFetchUint32(c.PC)
+			instruction, err := DecodeInstruction(instructionRAW)
+			if err != nil {
+				progress <- disp.Progress{fmt.Sprintf("ERR: %v", err), 1.0}
+				break
+			}
+			ip := ivm.MakeInstructionProxy(c, &vm.RAM)
+			instruction.Execute(ip)
+			progress <- disp.Progress{fmt.Sprintf("[%d] RUN %v", c.CoreNum, instruction.Assembly()), 0.0}
+			if c.ShouldHalt {
+				break
+			}
+		}
+	}()
 }
 
 // ProgramCounter returns the value of the program counter (PC).

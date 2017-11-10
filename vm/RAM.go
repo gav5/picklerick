@@ -9,23 +9,28 @@ import (
 	"./ivm"
 )
 
-// RAMNumWords is the number of words in the virtual machine RAM.
-const RAMNumWords = 1024
-
-// FrameSize is the size of a frame in RAM.
-const FrameSize = 16
-
 // RAM describes the virtual machine's RAM module.
-type RAM [RAMNumWords]ivm.Word
+type RAM [ivm.RAMNumFrames]ivm.Frame
+
+// MakeRAM makes an initial RAM module for the virtual machine.
+func MakeRAM() RAM {
+	r := RAM{}
+	for fnum := range r {
+		r[fnum] = ivm.MakeFrame()
+	}
+	return r
+}
 
 // AddressFetchWord returns the word value at the given address.
 func (r RAM) AddressFetchWord(addr ivm.Address) ivm.Word {
-	return r[addr]
+	framenum, frameaddr := ivm.FrameComponentsForAddress(addr / 4)
+	return r[framenum][frameaddr]
 }
 
 // AddressWriteWord writes the given word value to the given address.
 func (r *RAM) AddressWriteWord(addr ivm.Address, val ivm.Word) {
-	r[addr] = val
+	framenum, frameaddr := ivm.FrameComponentsForAddress(addr / 4)
+	r[framenum][frameaddr] = val
 }
 
 // AddressFetchUint32 returns the uint32 value at the given address.
@@ -58,6 +63,16 @@ func (r *RAM) AddressWriteBool(addr ivm.Address, val bool) {
 	r.AddressWriteWord(addr, ivm.WordFromBool(val))
 }
 
+// FrameFetch fetches the frame with the given frame number.
+func (r RAM) FrameFetch(frameNum ivm.FrameNumber) ivm.Frame {
+	return r[frameNum]
+}
+
+// FrameWrite writes the frame at the given frame number.
+func (r *RAM) FrameWrite(frameNum ivm.FrameNumber, frame ivm.Frame) {
+	copy(r[frameNum][:], frame[:])
+}
+
 // Print prints the contents of RAM to Stdout
 func (r RAM) Print() error {
 	return r.Fprint(os.Stdout)
@@ -65,35 +80,19 @@ func (r RAM) Print() error {
 
 // Fprint prints the contents of RAM to the given writer
 func (r RAM) Fprint(w io.Writer) error {
-	const numcolumns = 8
-	border := strings.Repeat("-", 11*numcolumns+3)
+	border := strings.Repeat("-", 11*ivm.FrameDisplayColumns+3)
 	var err error
 	fmt.Fprint(w, "\n")
-	for index, val := range r {
-		if (index % FrameSize) == 0 {
-			if index > 0 {
-				if _, err = fmt.Fprintln(w, border); err != nil {
-					return err
-				}
-			}
-			if _, err = fmt.Fprintf(w, "Frame %02X\n", index/FrameSize); err != nil {
+	for fnum, frame := range r {
+		if fnum > 0 {
+			if _, err = fmt.Fprintln(w, border); err != nil {
 				return err
 			}
 		}
-		switch index % numcolumns {
-		case 0:
-			if _, err = fmt.Fprintf(w, "%04X: %08X", index, val); err != nil {
-				return err
-			}
-		case (numcolumns - 1):
-			if _, err = fmt.Fprintf(w, " | %08X\n", val); err != nil {
-				return err
-			}
-		default:
-			if _, err = fmt.Fprintf(w, " | %08X", val); err != nil {
-				return err
-			}
+		if _, err = fmt.Fprintf(w, "Frame %02X\n", fnum); err != nil {
+			return err
 		}
+		frame.Fprint(w)
 	}
 	return nil
 }

@@ -50,3 +50,19 @@ func TestRAMBool(t *testing.T) {
 		t.Errorf("v1 != v2; expected %v to equal %v", v1, v2)
 	}
 }
+
+func TestRAMFrame(t *testing.T) {
+	ram := MakeRAM()
+	f1 := ivm.Frame{
+		0xFEEDFACE, 0xDEADBEEF, 0x00000000, 0x11111111,
+		0x22222222, 0x33333333, 0x44444444, 0x55555555,
+		0x66666666, 0x77777777, 0x88888888, 0x99999999,
+		0xaaaaaaaa, 0xbbbbbbbb, 0xcccccccc, 0xdddddddd,
+	}
+	ram.FrameWrite(42, f1)
+	f2 := ram.FrameFetch(42)
+
+	if !reflect.DeepEqual(f1, f2) {
+		t.Errorf("v1 != v2; expected %v to equal %v", f1, f2)
+	}
+}
