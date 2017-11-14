@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"../prog"
 	"../vm/ivm"
 )
 
@@ -51,11 +52,13 @@ type Process struct {
 	// priority: any
 }
 
-// MakeProcess makes a Process from a given program
-// func MakeProcess(program prog.Program) Process {
-// 	return Process{
-// 		CPUID:          0x01,
-// 		ProgramCounter: 0x00,
-// 		Program:        program,
-// 	}
-// }
+// MakeProcess makes a Process from a given program and page table
+func MakeProcess(program prog.Program, pageTable PageTable) Process {
+	return Process{
+		CPUID:          0x0,
+		ProgramCounter: 0x00,
+		CodeSize:       program.Job.NumberOfWords,
+		ProcessNumber:  program.Job.ID,
+		PageTable:      pageTable,
+	}
+}
