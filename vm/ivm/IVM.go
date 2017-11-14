@@ -32,14 +32,6 @@ type IVM interface {
 	RAMFrameWrite(FrameNumber, Frame)
 
 	// Working with Disk
-	DiskAddressFetchWord(Address) Word
-	DiskAddressWriteWord(Address, Word)
-	DiskAddressFetchUint32(Address) uint32
-	DiskAddressWriteUint32(Address, uint32)
-	DiskAddressFetchInt32(Address) int32
-	DiskAddressWriteInt32(Address, int32)
-	DiskAddressFetchBool(Address) bool
-	DiskAddressWriteBool(Address, bool)
 	DiskFrameFetch(FrameNumber) Frame
 	DiskFrameWrite(FrameNumber, Frame)
 }
