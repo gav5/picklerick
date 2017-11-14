@@ -8,31 +8,28 @@ import (
 // LoadPrograms loads the given programs into the virtual machine.
 func LoadPrograms(vm ivm.IVM, programs []prog.Program) error {
 	cur := ivm.FrameNumber(0)
+	var err error
+	var words []uint32
+	var pageTable PageTable
 	for _, p := range programs {
-		frames, err := p.Frames()
+		// add the given pages into the VM (starting with RAM, then disk)
+		words, err = p.GetWords()
 		if err != nil {
 			return err
 		}
-		if (int(cur) + len(frames)) < ivm.RAMNumFrames {
-			for _, f := range frames {
-				vm.RAMFrameWrite(cur, f)
-				cur++
-			}
-		} else if (cur - ivm.RAMNumFrames) < ivm.DiskNumFrames {
-			for _, f := range frames {
-				vm.DiskFrameWrite(cur-ivm.RAMNumFrames, f)
-				cur++
-			}
-		} else {
-			return ProgramOverflowError{}
+		pages := PageArrayFromUint32Array(words)
+		pageTable, err = PushPages(pages)
+		if err != nil {
+			return err
+		}
+		// add the add the program (as a process) to the process table
+		procTable[p.Job.ID] = Process{
+			CPUID:          0x0,
+			ProgramCounter: 0x00,
+			CodeSize:       p.Job.NumberOfWords,
+			ProcessNumber:  p.Job.ID,
+			PageTable:      pageTable,
 		}
 	}
 	return nil
-}
-
-// ProgramOverflowError means there isn't enough storage to hold all provided programs.
-type ProgramOverflowError struct{}
-
-func (e ProgramOverflowError) Error() string {
-	return "There isn't enough storage to hold all the provided programs."
 }

@@ -5,9 +5,9 @@ import (
 )
 
 // ContextSwitch switches context for PCB state to an active state on a CPU core.
-func ContextSwitch(vm ivm.IVM, coreNum uint8, pcb *PCB) {
-	vm.SetProgramCounter(coreNum, pcb.ProgramCounter)
-	for i, reg := range pcb.Registers {
+func ContextSwitch(vm ivm.IVM, coreNum uint8, process *Process) {
+	vm.SetProgramCounter(coreNum, process.ProgramCounter)
+	for i, reg := range process.Registers {
 		vm.SetRegisterWord(coreNum, ivm.RegisterDesignation(i), reg)
 	}
 	vm.ResetCore(coreNum)

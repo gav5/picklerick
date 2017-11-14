@@ -1,13 +1,12 @@
 package kernel
 
 import (
-	"../prog"
 	"../vm/ivm"
 )
 
-// PCB (aka Process Control Block) used to represent process execution
+// Process is used to represent process execution
 // also used to facilitate CPU reassignment during context switching
-type PCB struct {
+type Process struct {
 
 	// CPUID is used to describe the CPU the process is being run on
 	CPUID uint8
@@ -25,9 +24,15 @@ type PCB struct {
 	// (these are manipulated by instructions for general computational purposes)
 	Registers [ivm.NumCoreRegisters]ivm.Word
 
+	// ProcessNumber is the number assigned to the process for tracking in the process table
+	ProcessNumber uint8
+
+	// PageTable is used to track all pages used by the process
+	PageTable PageTable
+
 	// Program describes the program the PCB is running
 	// NOTE: this is a temporary measure to make this work!
-	Program prog.Program
+	// Program prog.Program
 
 	// schedule: any
 	// accounts: any
@@ -46,11 +51,11 @@ type PCB struct {
 	// priority: any
 }
 
-// MakePCB makes a PCB from a given program
-func MakePCB(program prog.Program) PCB {
-	return PCB{
-		CPUID:          0x01,
-		ProgramCounter: 0x00,
-		Program:        program,
-	}
-}
+// MakeProcess makes a Process from a given program
+// func MakeProcess(program prog.Program) Process {
+// 	return Process{
+// 		CPUID:          0x01,
+// 		ProgramCounter: 0x00,
+// 		Program:        program,
+// 	}
+// }
