@@ -31,6 +31,14 @@ type Process struct {
 	// PageTable is used to track all pages used by the process
 	PageTable PageTable
 
+	Metrics struct {
+		JobWaitTime       StopwatchMetric
+		JobCompletionTime StopwatchMetric
+		IOOperationCount  CountMetricUint32
+		RAMUse            FractionalMetricUint32
+		CacheUse          FractionalMetricUint32
+	}
+
 	// Program describes the program the PCB is running
 	// NOTE: this is a temporary measure to make this work!
 	// Program prog.Program
