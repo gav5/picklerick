@@ -1,4 +1,4 @@
-package kernel
+package metric
 
 // SequenceMetricUint32 records a sequence of values as a metric.
 type SequenceMetricUint32 struct {

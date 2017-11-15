@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"../prog"
+	"../metric"
 	"../vm/ivm"
 )
 
@@ -32,11 +33,11 @@ type Process struct {
 	PageTable PageTable
 
 	Metrics struct {
-		JobWaitTime       StopwatchMetric
-		JobCompletionTime StopwatchMetric
-		IOOperationCount  CountMetricUint32
-		RAMUse            FractionalMetricUint32
-		CacheUse          FractionalMetricUint32
+		JobWaitTime       metric.StopwatchMetric
+		JobCompletionTime metric.StopwatchMetric
+		IOOperationCount  metric.CountMetricUint32
+		RAMUse            metric.FractionalMetricUint32
+		CacheUse          metric.FractionalMetricUint32
 	}
 
 	// Program describes the program the PCB is running

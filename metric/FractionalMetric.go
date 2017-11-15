@@ -1,4 +1,4 @@
-package kernel
+package metric
 
 // FractionalMetricUint32 records the value of something out of a total.
 type FractionalMetricUint32 struct {

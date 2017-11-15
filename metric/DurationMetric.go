@@ -1,4 +1,4 @@
-package kernel
+package metric
 
 import "time"
 

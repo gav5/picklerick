@@ -1,4 +1,4 @@
-package kernel
+package metric
 
 // CountMetricUint32 records a counting value.
 type CountMetricUint32 struct {
