@@ -5,9 +5,15 @@ import (
 	"os"
 )
 
+// ProgressReporter is a channel used to report progress
+type ProgressReporter chan<- Progress
+
+// ProgressReceiver is a channel used to receive progress
+type ProgressReceiver <-chan Progress
+
 // Task defines a progress-reportable execution.
 type Task interface {
-	Run(chan Progress)
+	Run() ProgressReceiver
 }
 
 // Progress allows for the reporting of progress to the system.
@@ -19,8 +25,7 @@ type Progress struct {
 // RunTask runs the given task and displays the reported progress to the system.
 func RunTask(t Task) {
 	var p Progress
-	progress := make(chan Progress)
-	t.Run(progress)
+	progress := t.Run()
 
 	for true {
 		p = <-progress
