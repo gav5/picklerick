@@ -12,7 +12,8 @@ type Kernel struct {
   config config.Config
   virtualMachine ivm.IVM
   processTable processTableType
-  frameTable frameTableType
+  ramFrameTable frameTableType
+  diskFrameTable frameTableType
 }
 
 // MakeKernel makes a kernel with the given virtual machine.
@@ -21,7 +22,8 @@ func MakeKernel(virtualMachine ivm.IVM, c config.Config) (Kernel, error) {
     config: c,
     virtualMachine: virtualMachine,
     processTable: processTableType{},
-    frameTable: frameTableType{},
+    ramFrameTable: frameTableType{},
+    diskFrameTable: frameTableType{},
   }
   // load programs into the system
   var programArray []prog.Program
@@ -30,6 +32,9 @@ func MakeKernel(virtualMachine ivm.IVM, c config.Config) (Kernel, error) {
 		log.Fatalf("error parsing program file: %v\n", err)
 		return k, err
 	}
-  k.LoadPrograms(programArray)
+  log.Printf("Got %d programs!\n", len(programArray))
+  if err = k.LoadPrograms(programArray); err != nil {
+    return k, err
+  }
   return k, nil
 }

@@ -5,7 +5,8 @@ import (
 
 	"./config"
 	"./vm"
-	"./disp"
+	// "./disp"
+	"fmt"
 )
 
 func main() {
@@ -31,15 +32,15 @@ func main() {
 		return
 	}
 
-	// fmt.Print("RAM Dump:\n")
-	// _ = virtualMachine.RAM.Print()
-	// fmt.Print("\n")
+	fmt.Print("RAM Dump:\n")
+	_ = virtualMachine.RAM.Print()
+	fmt.Print("\n")
 
 	// fmt.Print("Disk Dump:\n")
 	// _ = virtualMachine.Disk.Print()
 	// fmt.Print("\n")
 
-	disp.RunTask(virtualMachine)
+	// disp.RunTask(virtualMachine)
 
 	// c := cpu.State{}
 

@@ -17,13 +17,15 @@ type VM struct {
 	RAM   RAM
 	Disk  Disk
 	osKernel kernel.Kernel
-	vmChannel vmChannelType
+	reporter disp.ProgressReporter
+	receiver disp.ProgressReceiver
 }
 
 const iter = 1000000
 
 // MakeVM makes a new virtual machine.
 func MakeVM(c config.Config) (VM, error) {
+	progress := make(chan disp.Progress)
 	vm := VM{
 		Clock: 0x00000000,
 		Cores: [NumCores]Core{
@@ -34,7 +36,8 @@ func MakeVM(c config.Config) (VM, error) {
 		},
 		RAM:  MakeRAM(),
 		Disk: Disk{},
-		progress: make(VMProgressType),
+		reporter: disp.ProgressReporter(progress),
+		receiver: disp.ProgressReceiver(progress),
 	}
 	// setup and configure the kernel
 	var err error
@@ -49,12 +52,12 @@ func MakeVM(c config.Config) (VM, error) {
 func (vm VM) Run() disp.ProgressReceiver {
 	go func() {
 		// run each core in its own goroutine
-		for i, core := range vm.Cores {
-			core.Run(coreCh[i], &vm)
+		for _, core := range vm.Cores {
+			coreReceiver := core.Run(&vm)
 			go func() {
 				for {
-					pr := <- coreCh[i]
-					vm.progress <- pr
+					pr := <- coreReceiver
+					vm.reporter <- pr
 					if pr.Value == 1.0 {
 						break
 					}
@@ -75,6 +78,7 @@ func (vm VM) Run() disp.ProgressReceiver {
 		// }
 		// progress <- disp.Progress{"Done!", 1.0}
 	}()
+	return vm.receiver
 }
 
 func (vm VM) instructionProxy(corenum uint8) ivm.InstructionProxy {

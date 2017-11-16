@@ -2,14 +2,16 @@ package disp
 
 import (
 	"fmt"
-	"os"
 )
 
+// ProgressChannel is a channel used to send progress
+type ProgressChannel (chan Progress)
+
 // ProgressReporter is a channel used to report progress
-type ProgressReporter chan<- Progress
+type ProgressReporter (chan<- Progress)
 
 // ProgressReceiver is a channel used to receive progress
-type ProgressReceiver <-chan Progress
+type ProgressReceiver (<-chan Progress)
 
 // Task defines a progress-reportable execution.
 type Task interface {
@@ -29,22 +31,23 @@ func RunTask(t Task) {
 
 	for true {
 		p = <-progress
-		if int(p.Value*10000)%100 == 0 {
-			titleStr := fmt.Sprintf(
-				"\r\u001b[0J%s %3d%%",
-				bold(p.Title),
-				int(p.Value * 100.00),
-			)
-			os.Stdout.WriteString(titleStr)
-			os.Stdout.Sync()
-		}
-		if p.Value == 1.0 {
-			os.Stdout.Write([]byte("\n"))
-			os.Stdout.Sync()
-			break
-		}
+		fmt.Printf("%s %3d%%\n", bold(p.Title), int(p.Value * 100.0))
+
+		// if int(p.Value*10000)%100 == 0 {
+		// 	titleStr := fmt.Sprintf(
+		// 		"\r\u001b[0J%s %3d%%",
+		// 		bold(p.Title),
+		// 		int(p.Value * 100.00),
+		// 	)
+		// 	os.Stdout.WriteString(titleStr)
+		// 	os.Stdout.Sync()
+		// }
+		// if p.Value == 1.0 {
+		// 	os.Stdout.Write([]byte("\n"))
+		// 	os.Stdout.Sync()
+		// 	break
+		// }
 	}
-	// os.Stdout.Write([]byte("\n"))
 }
 
 func bold(str string) string {

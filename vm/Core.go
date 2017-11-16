@@ -13,26 +13,32 @@ type Core struct {
 	PC         ivm.Address
 	Registers  [ivm.NumCoreRegisters]ivm.Word
 	ShouldHalt bool
+	reporter disp.ProgressReporter
+	receiver disp.ProgressReceiver
 }
 
 // MakeCore makes a new core.
 func MakeCore(coreNum uint8) Core {
-	return Core{
+	progress := make(chan disp.Progress)
+	core := Core{
 		CoreNum:    coreNum,
 		PC:         0x00000000,
 		Registers:  [ivm.NumCoreRegisters]ivm.Word{},
 		ShouldHalt: false,
+		reporter: disp.ProgressReporter(progress),
+		receiver: disp.ProgressReceiver(progress),
 	}
+	return core
 }
 
 // Run runs the core.
-func (c *Core) Run(progress chan disp.Progress, vm *VM) {
+func (c *Core) Run(vm *VM) disp.ProgressReceiver {
 	go func() {
 		for {
 			instructionRAW := vm.RAM.AddressFetchUint32(c.PC)
 			instruction, err := DecodeInstruction(instructionRAW)
 			if err != nil {
-				progress <- disp.Progress{
+				c.reporter <- disp.Progress{
 					fmt.Sprintf("ERR: %v", err),
 					1.0,
 				}
@@ -42,19 +48,20 @@ func (c *Core) Run(progress chan disp.Progress, vm *VM) {
 			instruction.Execute(ip)
 			asmString := instruction.Assembly()
 			if c.ShouldHalt {
-				progress <- disp.Progress{
+				c.reporter <- disp.Progress{
 					fmt.Sprintf("[%d] HALT", c.CoreNum),
 					1.0,
 				}
 				break
 			} else {
-				progress <- disp.Progress{
+				c.reporter <- disp.Progress{
 					fmt.Sprintf("[%d] RUN %v", c.CoreNum, asmString),
 					0.0,
 				}
 			}
 		}
 	}()
+	return c.receiver
 }
 
 // ProgramCounter returns the value of the program counter (PC).
