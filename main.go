@@ -1,29 +1,22 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"./config"
-	"./kernel"
-	"./prog"
 	"./vm"
+	"./disp"
 )
 
 func main() {
 	var err error
 	var sharedConfig config.Config
-	var programArray []prog.Program
+	var virtualMachine vm.VM
 
 	// load app configuration
-	if sharedConfig, err = config.Shared(); err != nil {
+	sharedConfig, err = config.Shared()
+	if err != nil {
 		log.Fatalf("error extracting shared configuration: %v", err)
-		return
-	}
-
-	// parse file and display assembly code for each job
-	if programArray, err = prog.ParseFile(sharedConfig.Progfile); err != nil {
-		log.Fatalf("error parsing program file: %v\n", err)
 		return
 	}
 
@@ -32,8 +25,12 @@ func main() {
 	log.Printf("program file: %s\n", sharedConfig.Progfile)
 	fmt.Println()
 
-	virtualMachine := vm.MakeVM()
-	kernel.LoadPrograms(&virtualMachine, programArray)
+	// build the virtual machine with the given config
+	virtualMachine, err = vm.MakeVM(sharedConfig)
+	if err != nil {
+		log.Fatalf("error building virtual machine: %v", err)
+		return
+	}
 
 	fmt.Print("RAM Dump:\n")
 	_ = virtualMachine.RAM.Print()

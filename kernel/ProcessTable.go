@@ -1,7 +1,7 @@
 package kernel
 
-var procTable map[uint8]Process
+type processTableType map[uint8]Process
 
-func addProcessToProcessTable(process Process) {
-	procTable[process.ProcessNumber] = process
+func (k *Kernel) addProcessToProcessTable(process Process) {
+	k.processTable[process.ProcessNumber] = process
 }

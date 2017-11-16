@@ -14,7 +14,7 @@ type PageNumber ivm.FrameNumber
 // PageTable is a mapping of PageNumbers to VM FrameNumbers
 type PageTable map[PageNumber]ivm.FrameNumber
 
-var frameTable map[ivm.FrameNumber]PageNumber
+type frameTableType map[ivm.FrameNumber]PageNumber
 
 // PageArrayFromFrameArray returns a list of pages for a given list of frames.
 func PageArrayFromFrameArray(ary []ivm.Frame) []Page {
@@ -47,40 +47,40 @@ func PageArrayFromProgram(program prog.Program) ([]Page, error) {
 }
 
 // PageReadRAM reads a page from the RAM at the given page number and page table.
-func PageReadRAM(vm ivm.IVM, pageNumber PageNumber, pageTable PageTable) Page {
+func (k Kernel) PageReadRAM(pageNumber PageNumber, pageTable PageTable) Page {
 	frameNumber := pageTable[pageNumber]
-	frame := vm.RAMFrameFetch(frameNumber)
+	frame := k.virtualMachine.RAMFrameFetch(frameNumber)
 	return Page(frame)
 }
 
 // PageWrite writes the given page to the VM at the given page number.
-func PageWrite(vm ivm.IVM, page Page, pageNumber PageNumber, pageTable PageTable) {
+func (k Kernel) PageWrite(page Page, pageNumber PageNumber, pageTable PageTable) {
 	frameNumber := pageTable[pageNumber]
 	frame := ivm.Frame(page)
-	vm.RAMFrameWrite(frameNumber, frame)
+	k.virtualMachine.RAMFrameWrite(frameNumber, frame)
 }
 
 // PushPages pushes a given page array into the first available space in the VM.
 // (this prefers RAM, but falls back to using disk if necessary; returns error otherwise)
-func PushPages(vm ivm.IVM, pages []Page, pageTable *PageTable) error {
+func (k *Kernel) PushPages(pages []Page, pageTable *PageTable) error {
 	// TODO: find a good space for the pages to go (and add to the page table)
 	for index, page := range pages {
 		// TODO: use a real page number here
-		PageWrite(vm, page, PageNumber(index), *pageTable)
+		k.PageWrite(page, PageNumber(index), *pageTable)
 	}
 	return nil
 }
 
 // PushProgram pushes a program into the first available space in the VM.
 // (this prefers RAM, but falls back to using the disk if necessary; returns error otherwise)
-func PushProgram(vm ivm.IVM, program prog.Program, pageTable *PageTable) error {
+func (k *Kernel) PushProgram(program prog.Program, pageTable *PageTable) error {
 	// get the pages for the given program
 	pages, err := PageArrayFromProgram(program)
 	if err != nil {
 		return err
 	}
 	// push those pages into the VM and return the result
-	return PushPages(vm, pages, pageTable)
+	return k.PushPages(pages, pageTable)
 }
 
 // PushOverflowError means there isn't enough storage to hold all provided data.

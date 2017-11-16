@@ -3,6 +3,8 @@ package vm
 import (
 	"../disp"
 	"./ivm"
+	"../kernel"
+	"../config"
 )
 
 // NumCores is the number of cores in the virtual machine.
@@ -14,13 +16,14 @@ type VM struct {
 	Cores [NumCores]Core
 	RAM   RAM
 	Disk  Disk
+	osKernel kernel.Kernel
 }
 
 const iter = 1000000
 
 // MakeVM makes a new virtual machine.
-func MakeVM() VM {
-	return VM{
+func MakeVM(c config.Config) (VM, error) {
+	vm := VM{
 		Clock: 0x00000000,
 		Cores: [NumCores]Core{
 			MakeCore(0),
@@ -31,6 +34,13 @@ func MakeVM() VM {
 		RAM:  MakeRAM(),
 		Disk: Disk{},
 	}
+	// setup and configure the kernel
+	var err error
+	vm.osKernel, err = kernel.MakeKernel(&vm, c)
+	if err != nil {
+		return vm, err
+	}
+	return vm, nil
 }
 
 // Run runs the virtual machine.
