@@ -8,10 +8,10 @@ import (
 
 const (
 	// FrameSize is the size of a frame.
-	FrameSize = 16
+	FrameSize = 4
 
 	// FrameDisplayColumns is the number of columns to display a frame with.
-	FrameDisplayColumns = 8
+	FrameDisplayColumns = 4
 )
 
 // Frame describes a frame in the virtual machine.
@@ -21,9 +21,6 @@ type Frame [FrameSize]Word
 // MakeFrame makes an initial frame for the virtual machine.
 func MakeFrame() Frame {
 	return Frame{
-		0x00000000, 0x00000000, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0x00000000,
 		0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	}
 }
