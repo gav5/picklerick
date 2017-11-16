@@ -23,7 +23,6 @@ func main() {
 	// introduce program, display configuration
 	log.Println("picklerick OS")
 	log.Printf("program file: %s\n", sharedConfig.Progfile)
-	fmt.Println()
 
 	// build the virtual machine with the given config
 	virtualMachine, err = vm.MakeVM(sharedConfig)
@@ -32,15 +31,15 @@ func main() {
 		return
 	}
 
-	fmt.Print("RAM Dump:\n")
-	_ = virtualMachine.RAM.Print()
-	fmt.Print("\n")
+	// fmt.Print("RAM Dump:\n")
+	// _ = virtualMachine.RAM.Print()
+	// fmt.Print("\n")
 
-	fmt.Print("Disk Dump:\n")
-	_ = virtualMachine.Disk.Print()
-	fmt.Print("\n")
+	// fmt.Print("Disk Dump:\n")
+	// _ = virtualMachine.Disk.Print()
+	// fmt.Print("\n")
 
-	// disp.RunTask(virtualMachine)
+	disp.RunTask(virtualMachine)
 
 	// c := cpu.State{}
 

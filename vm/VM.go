@@ -17,6 +17,7 @@ type VM struct {
 	RAM   RAM
 	Disk  Disk
 	osKernel kernel.Kernel
+	vmChannel vmChannelType
 }
 
 const iter = 1000000
@@ -33,6 +34,7 @@ func MakeVM(c config.Config) (VM, error) {
 		},
 		RAM:  MakeRAM(),
 		Disk: Disk{},
+		progress: make(VMProgressType),
 	}
 	// setup and configure the kernel
 	var err error
@@ -44,22 +46,34 @@ func MakeVM(c config.Config) (VM, error) {
 }
 
 // Run runs the virtual machine.
-func (vm *VM) Run(progress chan disp.Progress) {
+func (vm VM) Run() disp.ProgressReceiver {
 	go func() {
-		coreCh := make([]chan disp.Progress, NumCores)
 		// run each core in its own goroutine
 		for i, core := range vm.Cores {
-			core.Run(coreCh[i], vm)
-		}
-		for {
+			core.Run(coreCh[i], &vm)
+			go func() {
+				for {
+					pr := <- coreCh[i]
+					vm.progress <- pr
+					if pr.Value == 1.0 {
+						break
+					}
+				}
+			}()
 		}
 		// for i := 0; i < iter/2; i++ {
-		// 	done <- disp.Progress{"Doing Thing (Part 1)", float32(i) / iter}
+		// 	progress <- disp.Progress{
+		// 		"Doing Thing (Part 1)",
+		// 		float32(i) / iter,
+		// 	}
 		// }
 		// for i := iter / 2; i < iter; i++ {
-		// 	done <- disp.Progress{"Doing Thing (Part 2)", float32(i) / iter}
+		// 	progress <- disp.Progress{
+		// 		"Doing Thing (Part 2)",
+		// 		float32(i) / iter,
+		// 	}
 		// }
-		// done <- disp.Progress{"Done!", 1.0}
+		// progress <- disp.Progress{"Done!", 1.0}
 	}()
 }
 
