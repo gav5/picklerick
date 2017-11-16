@@ -32,14 +32,26 @@ func (c *Core) Run(progress chan disp.Progress, vm *VM) {
 			instructionRAW := vm.RAM.AddressFetchUint32(c.PC)
 			instruction, err := DecodeInstruction(instructionRAW)
 			if err != nil {
-				progress <- disp.Progress{fmt.Sprintf("ERR: %v", err), 1.0}
+				progress <- disp.Progress{
+					fmt.Sprintf("ERR: %v", err),
+					1.0,
+				}
 				break
 			}
 			ip := ivm.MakeInstructionProxy(c, &vm.RAM)
 			instruction.Execute(ip)
-			progress <- disp.Progress{fmt.Sprintf("[%d] RUN %v", c.CoreNum, instruction.Assembly()), 0.0}
+			asmString := instruction.Assembly()
 			if c.ShouldHalt {
+				progress <- disp.Progress{
+					fmt.Sprintf("[%d] HALT", c.CoreNum),
+					1.0,
+				}
 				break
+			} else {
+				progress <- disp.Progress{
+					fmt.Sprintf("[%d] RUN %v", c.CoreNum, asmString),
+					0.0,
+				}
 			}
 		}
 	}()
