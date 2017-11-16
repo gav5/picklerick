@@ -9,8 +9,7 @@ const (
 )
 
 // IRAM is the kernel interface into a virtual machine random access memory.
-// (this is because vm uses the kernel, so we have to avoid circular dependencies)
-// (this also helps regulate the access of the vm by the kernel to avoid abuse)
+// (this is to avoid circular dependencies and regulate kernel access)
 type IRAM interface {
 
 	// Addresses as gateways to words
