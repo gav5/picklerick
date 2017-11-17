@@ -7,13 +7,10 @@ import (
 	"../config"
 )
 
-// NumCores is the number of cores in the virtual machine.
-const NumCores = 4
-
 // VM is the virtual computer system.
 type VM struct {
 	Clock Clock
-	Cores [NumCores]Core
+	Cores [ivm.NumCores]Core
 	RAM   RAM
 	Disk  Disk
 	osKernel kernel.Kernel
@@ -28,7 +25,7 @@ func MakeVM(c config.Config) (VM, error) {
 	progress := make(chan disp.Progress)
 	vm := VM{
 		Clock: 0x00000000,
-		Cores: [NumCores]Core{
+		Cores: [ivm.NumCores]Core{
 			MakeCore(0),
 			MakeCore(1),
 			MakeCore(2),
