@@ -1,9 +1,10 @@
-package kernel
+package process
 
 import (
-	"../prog"
-	"../metric"
-	"../vm/ivm"
+	"../page"
+	"../../prog"
+	"../../metric"
+	"../../vm/ivm"
 )
 
 // Process is used to represent process execution
@@ -30,7 +31,7 @@ type Process struct {
 	ProcessNumber uint8
 
 	// PageTable is used to track all pages used by the process
-	PageTable PageTable
+	PageTable page.Table
 
 	// Priority is used for sorting purposes
 	Priority uint8
@@ -64,8 +65,8 @@ type Process struct {
 	// priority: any
 }
 
-// MakeProcess makes a Process from a given program and page table
-func MakeProcess(program prog.Program, pageTable PageTable) Process {
+// Make makes a Process from a given program and page table
+func Make(program prog.Program, pageTable page.Table) Process {
 	return Process{
 		CPUID:          0x0,
 		ProgramCounter: 0x00,

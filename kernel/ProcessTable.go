@@ -1,7 +1,9 @@
 package kernel
 
-type processTableType map[uint8]Process
-
-func (k *Kernel) addProcessToProcessTable(process Process) {
-	k.processTable[process.ProcessNumber] = process
-}
+// import "./process"
+//
+// type processTableType map[uint8]process.Process
+//
+// func (k *Kernel) addProcessToProcessTable(p process.Process) {
+// 	k.processTable[p.ProcessNumber] = p
+// }

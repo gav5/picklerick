@@ -2,10 +2,11 @@ package kernel
 
 import (
 	"../vm/ivm"
+	"./process"
 )
 
 // ContextSwitch switches context for PCB state to an active state on a CPU core.
-func (k *Kernel) ContextSwitch(coreNum uint8, process *Process) {
+func (k *Kernel) ContextSwitch(coreNum uint8, process *process.Process) {
 	k.virtualMachine.SetProgramCounter(coreNum, process.ProgramCounter)
 	for i, reg := range process.Registers {
 		k.virtualMachine.SetRegisterWord(coreNum, ivm.RegisterDesignation(i), reg)

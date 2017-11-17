@@ -1,14 +1,14 @@
-package kernel
+package page
 
 import (
   "reflect"
   "testing"
-  "../vm/ivm"
 
-  "../prog"
+  "../../vm/ivm"
+  "../../prog"
 )
 
-var pageArrayFromFrameArrayTests = []struct {
+var arrayFromFrameArrayTests = []struct {
   in []ivm.Frame
   out []Page
 }{
@@ -44,20 +44,20 @@ var pageArrayFromFrameArrayTests = []struct {
   },
 }
 
-func TestPageArrayFromFrameArray(t *testing.T) {
-  for _, tt := range pageArrayFromFrameArrayTests {
-    pageArray := PageArrayFromFrameArray(tt.in)
+func TestArrayFromFrameArray(t *testing.T) {
+  for _, tt := range arrayFromFrameArrayTests {
+    pageArray := ArrayFromFrameArray(tt.in)
     if !reflect.DeepEqual(pageArray, tt.out) {
       t.Errorf(
         "%s\nhave\t%v\nwant\t%v\n",
-        "PageArrayFromFrameArray() did not return the expected value",
+        "ArrayFromFrameArray() did not return the expected value",
         pageArray, tt.out,
       )
     }
   }
 }
 
-var pageArrayFromWordArrayTests = []struct {
+var arrayFromWordArrayTests = []struct {
   in []ivm.Word
   out []Page
 }{
@@ -91,20 +91,20 @@ var pageArrayFromWordArrayTests = []struct {
   },
 }
 
-func TestPageArrayFromWordArray(t *testing.T) {
-  for _, tt := range pageArrayFromWordArrayTests {
-    pageArray := PageArrayFromWordArray(tt.in)
+func TestArrayFromWordArray(t *testing.T) {
+  for _, tt := range arrayFromWordArrayTests {
+    pageArray := ArrayFromWordArray(tt.in)
     if !reflect.DeepEqual(pageArray, tt.out) {
       t.Errorf(
         "%s\nhave\t%v\nwant\t%v\n",
-        "PageArrayFromWordArray() did not return the expected value",
+        "ArrayFromWordArray() did not return the expected value",
         pageArray, tt.out,
       )
     }
   }
 }
 
-var pageArrayFromUint32ArrayTests = []struct {
+var arrayFromUint32ArrayTests = []struct {
   in []uint32
   out []Page
 }{
@@ -138,20 +138,20 @@ var pageArrayFromUint32ArrayTests = []struct {
   },
 }
 
-func TestPageArrayFromUint32Array(t *testing.T) {
-  for _, tt := range pageArrayFromUint32ArrayTests {
-    pageArray := PageArrayFromUint32Array(tt.in)
+func TestArrayFromUint32Array(t *testing.T) {
+  for _, tt := range arrayFromUint32ArrayTests {
+    pageArray := ArrayFromUint32Array(tt.in)
     if !reflect.DeepEqual(pageArray, tt.out) {
       t.Errorf(
         "%s\nhave\t%v\nwant\t%v\n",
-        "PageArrayFromUint32Array() did not return the expected value",
+        "ArrayFromUint32Array() did not return the expected value",
         pageArray, tt.out,
       )
     }
   }
 }
 
-var pageArrayFromProgramTests = []struct {
+var arrayFromProgramTests = []struct {
   program prog.Program
   pageArray []Page
 }{
@@ -211,12 +211,12 @@ var pageArrayFromProgramTests = []struct {
   },
 }
 
-func TestPageArrayFromProgram(t *testing.T) {
-  for _, tt := range pageArrayFromProgramTests {
-    pageArray := PageArrayFromProgram(tt.program)
+func TestArrayFromProgram(t *testing.T) {
+  for _, tt := range arrayFromProgramTests {
+    pageArray := ArrayFromProgram(tt.program)
     if !reflect.DeepEqual(pageArray, tt.pageArray) {
       t.Errorf(
-        "PageArrayFromProgram(pg%d) %s\nhave\t%v\nwant\t%v",
+        "ArrayFromProgram(pg%d) %s\nhave\t%v\nwant\t%v",
         tt.program.Job.ID, "did not return the expected value",
         pageArray, tt.pageArray,
       )
