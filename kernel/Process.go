@@ -32,6 +32,9 @@ type Process struct {
 	// PageTable is used to track all pages used by the process
 	PageTable PageTable
 
+	// Priority is used for sorting purposes
+	Priority uint8
+
 	Metrics struct {
 		JobWaitTime       metric.StopwatchMetric
 		JobCompletionTime metric.StopwatchMetric
@@ -68,6 +71,7 @@ func MakeProcess(program prog.Program, pageTable PageTable) Process {
 		ProgramCounter: 0x00,
 		CodeSize:       program.Job.NumberOfWords,
 		ProcessNumber:  program.Job.ID,
+		Priority: 			program.Job.PriorityNumber,
 		PageTable:      pageTable,
 	}
 }
