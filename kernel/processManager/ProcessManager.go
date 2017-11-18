@@ -1,6 +1,10 @@
 package processManager
 
-import "../process"
+import (
+  "container/heap"
+
+  "../process"
+)
 
 // TODO: make into a priority queue
 // (look at https://golang.org/pkg/container/heap/#example__priorityQueue)
@@ -10,44 +14,32 @@ type SortMethod func(p1, p2 process.Process) bool
 
 // ProcessManager keeps track of system processes.
 type ProcessManager struct {
-  processList []process.Process
-  sortMethod SortMethod
+  processList processList
 }
 
 // New creates a new process manager.
 func New(sortMethod SortMethod) *ProcessManager {
-  return &ProcessManager{
-    processList: []process.Process{},
-    sortMethod: sortMethod,
+  pm := &ProcessManager{
+    processList: processList{
+      base: []process.Process{},
+      sortMethod: sortMethod,
+    },
   }
+  heap.Init(&pm.processList)
+  return pm
 }
 
-// Len is for the heap interface
-func (pm ProcessManager) Len() int {
-  return len(pm.processList)
+// Add adds a process into the process manager.
+func (pm ProcessManager) Add(p process.Process) {
+  heap.Push(pm.processList, p)
 }
 
-// Less is for the heap interface
-// (this is where sorting is done!!)
-func (pm ProcessManager) Less(i, j int) bool {
-  return pm.sortMethod(pm.processList[i], pm.processList[j])
-}
-
-// Swap is for the heap interface
-func (pm ProcessManager) Swap(i, j int) {
-  pm.processList[i], pm.processList[j] = pm.processList[j], pm.processList[i]
-}
-
-// Push is for the heap interface
-func (pm *ProcessManager) Push(x interface{}) {
-  pm.processList = append(pm.processList, x.(process.Process))
-}
-
-// Pop is for the heap interface
-func (pm *ProcessManager) Pop() interface{} {
-  old := pm.processList
-  n := len(old)
-  x := old[n-1]
-  pm.processList = old[0:n-1]
-  return x
+// Find returns the process with the corresponding process number.
+func (pm ProcessManager) Find(processNumber uint8) *process.Process {
+  for _, p := range pm.processList.base {
+    if p.ProcessNumber == processNumber {
+      return &p
+    }
+  }
+  return nil
 }
