@@ -3,6 +3,7 @@ package vm
 import (
 	"../disp"
 	"./ivm"
+	"./core"
 	"../kernel"
 	"../config"
 )
@@ -10,26 +11,26 @@ import (
 // VM is the virtual computer system.
 type VM struct {
 	Clock Clock
-	Cores [ivm.NumCores]Core
+	Cores [ivm.NumCores]*core.Core
 	RAM   RAM
 	Disk  Disk
-	osKernel kernel.Kernel
+	osKernel *kernel.Kernel
 	reporter disp.ProgressReporter
 	receiver disp.ProgressReceiver
 }
 
-const iter = 1000000
+const maxCount = 10
 
-// MakeVM makes a new virtual machine.
-func MakeVM(c config.Config) (VM, error) {
+// New makes a new virtual machine.
+func New(c config.Config) (*VM, error) {
 	progress := make(chan disp.Progress)
-	vm := VM{
+	vm := &VM{
 		Clock: 0x00000000,
-		Cores: [ivm.NumCores]Core{
-			MakeCore(0),
-			MakeCore(1),
-			MakeCore(2),
-			MakeCore(3),
+		Cores: [ivm.NumCores]*core.Core{
+			core.New(0),
+			core.New(1),
+			core.New(2),
+			core.New(3),
 		},
 		RAM:  MakeRAM(),
 		Disk: Disk{},
@@ -38,7 +39,7 @@ func MakeVM(c config.Config) (VM, error) {
 	}
 	// setup and configure the kernel
 	var err error
-	vm.osKernel, err = kernel.MakeKernel(&vm, c)
+	vm.osKernel, err = kernel.New(vm, c)
 	if err != nil {
 		return vm, err
 	}
@@ -46,19 +47,20 @@ func MakeVM(c config.Config) (VM, error) {
 }
 
 // Run runs the virtual machine.
-func (vm VM) Run() disp.ProgressReceiver {
+func (vm *VM) Run() disp.ProgressReceiver {
 	go func() {
 		// run each core in its own goroutine
 		for _, core := range vm.Cores {
-			coreReceiver := core.Run(&vm)
+			coreReceiver := core.Run(vm)
 			go func() {
-				for {
+				for count := 0; count < maxCount; count++ {
 					pr := <- coreReceiver
 					vm.reporter <- pr
 					if pr.Value == 1.0 {
 						break
 					}
 				}
+				vm.reporter <- disp.Progress{Title: "Timeout", Value: 1.0}
 			}()
 		}
 		// for i := 0; i < iter/2; i++ {
@@ -78,8 +80,9 @@ func (vm VM) Run() disp.ProgressReceiver {
 	return vm.receiver
 }
 
-func (vm VM) instructionProxy(corenum uint8) ivm.InstructionProxy {
-	return ivm.MakeInstructionProxy(&vm.Cores[corenum], &vm.RAM)
+// InstructionProxy makes an instruction proxy for the given core
+func (vm VM) InstructionProxy(c ivm.ICore) ivm.InstructionProxy {
+	return ivm.MakeInstructionProxy(c, &vm.RAM)
 }
 
 // ProgramCounter returns the value of the program counter (PC).

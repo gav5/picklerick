@@ -1,11 +1,16 @@
-package vm
+package core
 
 import (
 	"reflect"
 	"testing"
 
-	"./ivm"
+	"../ivm"
 )
+
+func TestCoreICoreRelationship(t *testing.T) {
+	c := &Core{}
+	_ = ivm.ICore(c)
+}
 
 func TestCoreProgramCounter(t *testing.T) {
 	c := &Core{}

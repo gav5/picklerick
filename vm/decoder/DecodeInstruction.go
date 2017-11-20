@@ -1,8 +1,8 @@
-package vm
+package decoder
 
 import (
-	"../util"
-	"./ivm"
+	"../../util"
+	"../ivm"
 )
 
 // DecodeInstruction makes an instruction from the given 32-bit value

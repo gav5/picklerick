@@ -1,9 +1,9 @@
-package vm
+package decoder
 
 import (
 	"testing"
 
-	"./ivm"
+	"../ivm"
 )
 
 var decodeInstructionTests = []struct {

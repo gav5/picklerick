@@ -5,31 +5,37 @@ import (
 	"testing"
 
 	"./ivm"
+	"./core"
 )
+
+func TestVMIVMRelationship(t *testing.T) {
+	vm := &VM{}
+	_ = ivm.IVM(vm)
+}
 
 func TestVMInstructionProxy(t *testing.T) {
 	vm := VM{
 		Clock: 42,
-		Cores: [ivm.NumCores]Core{
-			Core{
+		Cores: [ivm.NumCores]*core.Core{
+			&core.Core{
 				PC: 42,
 				Registers: [ivm.NumCoreRegisters]ivm.Word{
 					0xFEEDFACE, 0xDEADBEEF, 0x12345678,
 				},
 			},
-			Core{
+			&core.Core{
 				PC: 1,
 				Registers: [ivm.NumCoreRegisters]ivm.Word{
 					0x12345678, 0xFEEDFACE, 0xDEADBEEF,
 				},
 			},
-			Core{
+			&core.Core{
 				PC: 2,
 				Registers: [ivm.NumCoreRegisters]ivm.Word{
 					0xDEADBEEF, 0x12345678, 0xFEEDFACE,
 				},
 			},
-			Core{
+			&core.Core{
 				PC: 3,
 				Registers: [ivm.NumCoreRegisters]ivm.Word{
 					0x87654321, 0x11111111, 0x22222222,
@@ -48,8 +54,8 @@ func TestVMInstructionProxy(t *testing.T) {
 		},
 		Disk: Disk{},
 	}
-	ip1 := vm.instructionProxy(0)
-	ip2 := ivm.MakeInstructionProxy(&vm.Cores[0], &vm.RAM)
+	ip1 := vm.InstructionProxy(vm.Cores[0])
+	ip2 := ivm.MakeInstructionProxy(vm.Cores[0], &vm.RAM)
 	if !reflect.DeepEqual(ip1, ip2) {
 		t.Errorf("ip1 != ip2; expected %v to equal %v", ip1, ip2)
 	}

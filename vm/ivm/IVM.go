@@ -37,4 +37,7 @@ type IVM interface {
 	// Working with Disk
 	DiskFrameFetch(FrameNumber) Frame
 	DiskFrameWrite(FrameNumber, Frame)
+
+	// Making an InstructionProxy
+	InstructionProxy(ICore) InstructionProxy
 }

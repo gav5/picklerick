@@ -17,9 +17,9 @@ type Kernel struct {
   // diskFrameTable frameTableType
 }
 
-// MakeKernel makes a kernel with the given virtual machine.
-func MakeKernel(virtualMachine ivm.IVM, c config.Config) (Kernel, error) {
-  k := Kernel{
+// New makes a kernel with the given virtual machine.
+func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
+  k := &Kernel{
     config: c,
     virtualMachine: virtualMachine,
     // processTable: processTableType{},

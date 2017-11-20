@@ -1,8 +1,8 @@
-package vm
+package decoder
 
 import (
-	"./instr"
-	"./ivm"
+	"../instr"
+	"../ivm"
 )
 
 func decodeOpcode(op ivm.Opcode) (ivm.InstructionFactory, error) {

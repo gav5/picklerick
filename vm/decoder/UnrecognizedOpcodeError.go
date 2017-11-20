@@ -1,9 +1,9 @@
-package vm
+package decoder
 
 import (
 	"fmt"
 
-	"./ivm"
+	"../ivm"
 )
 
 // UnrecognizedOpcodeError indicates the opcode was not valid

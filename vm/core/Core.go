@@ -1,10 +1,11 @@
-package vm
+package core
 
 import (
 	"fmt"
 
-	"../disp"
-	"./ivm"
+	"../../disp"
+	"../ivm"
+	"../decoder"
 )
 
 // Core describes a CPU Core in the virtual machine.
@@ -17,10 +18,10 @@ type Core struct {
 	receiver disp.ProgressReceiver
 }
 
-// MakeCore makes a new core.
-func MakeCore(coreNum uint8) Core {
+// New makes a new core.
+func New(coreNum uint8) *Core {
 	progress := make(chan disp.Progress)
-	core := Core{
+	core := &Core{
 		CoreNum:    coreNum,
 		PC:         0x00000000,
 		Registers:  [ivm.NumCoreRegisters]ivm.Word{},
@@ -32,11 +33,12 @@ func MakeCore(coreNum uint8) Core {
 }
 
 // Run runs the core.
-func (c *Core) Run(vm *VM) disp.ProgressReceiver {
+func (c *Core) Run(vm ivm.IVM) disp.ProgressReceiver {
 	go func() {
+		c.PC = 0x00000000
 		for {
-			instructionRAW := vm.RAM.AddressFetchUint32(c.PC)
-			instruction, err := DecodeInstruction(instructionRAW)
+			instructionRAW := vm.RAMAddressFetchUint32(c.PC)
+			instruction, err := decoder.DecodeInstruction(instructionRAW)
 			if err != nil {
 				c.reporter <- disp.Progress{
 					fmt.Sprintf("ERR: %v", err),
@@ -44,7 +46,7 @@ func (c *Core) Run(vm *VM) disp.ProgressReceiver {
 				}
 				break
 			}
-			ip := ivm.MakeInstructionProxy(c, &vm.RAM)
+			ip := vm.InstructionProxy(c)
 			instruction.Execute(ip)
 			asmString := instruction.Assembly()
 			if c.ShouldHalt {
@@ -55,10 +57,14 @@ func (c *Core) Run(vm *VM) disp.ProgressReceiver {
 				break
 			} else {
 				c.reporter <- disp.Progress{
-					fmt.Sprintf("[%d] RUN %v", c.CoreNum, asmString),
+					fmt.Sprintf(
+						"[%d] RUN %v <%v: %08X>",
+						c.CoreNum, asmString, c.PC, instructionRAW,
+					),
 					0.0,
 				}
 			}
+			c.PC += 4
 		}
 	}()
 	return c.receiver
