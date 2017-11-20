@@ -19,7 +19,7 @@ type VM struct {
 	receiver disp.ProgressReceiver
 }
 
-const maxCount = 10
+const maxCount = 1000000
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {

@@ -4,6 +4,9 @@ import (
   "../vm/ivm"
   "../prog"
   "../config"
+  "./resourceManager"
+  "./processManager"
+  "./process"
   "./page"
   "log"
 )
@@ -12,9 +15,13 @@ import (
 type Kernel struct {
   config config.Config
   virtualMachine ivm.IVM
-  // processTable processTableType
-  // ramFrameTable frameTableType
-  // diskFrameTable frameTableType
+  ramRM *resourceManager.ResourceManager
+  diskRM *resourceManager.ResourceManager
+  pm *processManager.ProcessManager
+}
+
+func noSort(p1, p2 process.Process) bool {
+  return false
 }
 
 // New makes a kernel with the given virtual machine.
@@ -22,9 +29,9 @@ func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
   k := &Kernel{
     config: c,
     virtualMachine: virtualMachine,
-    // processTable: processTableType{},
-    // ramFrameTable: frameTableType{},
-    // diskFrameTable: frameTableType{},
+    ramRM: resourceManager.New(ivm.RAMNumFrames),
+    diskRM: resourceManager.New(ivm.DiskNumFrames),
+    pm: processManager.New(noSort),
   }
   // load programs into the system
   var programArray []prog.Program
@@ -48,30 +55,24 @@ func (k Kernel) PageReadRAM(pageNumber page.Number, pageTable page.Table) page.P
 }
 
 // PageWriteRAM writes the given page to the RAM at the given page number.
-func (k Kernel) PageWriteRAM(page page.Page, pageNumber page.Number, pageTable page.Table) {
+func (k Kernel) PageWriteRAM(p page.Page, pageNumber page.Number, pageTable page.Table) {
 	frameNumber := pageTable[pageNumber]
-	log.Printf("Writing to Page #%d (Frame #%d) in RAM", pageNumber, frameNumber)
-	frame := ivm.Frame(page)
+	frame := ivm.Frame(p)
 	k.virtualMachine.RAMFrameWrite(frameNumber, frame)
 }
 
-// RAMPushPages pushes a given page array into the first available space in RAM.
-func (k *Kernel) RAMPushPages(pages []page.Page, pageTable *page.Table) error {
-	// TODO: find a good space for the pages to go (and add to the page table)
-	// for index, p := range pages {
-	// 	pageNumber := page.PageNumber(index)
-	// 	// determine a frame number
-	// 	// TODO: use a real frame number here (for now, it's just FIFO)
-	// 	usedFrameNumbers := k.ramFrameTable.UsedFrameNumbers()
-	// 	frameNumber := ivm.FrameNumber(len(usedFrameNumbers))
-	// 	if frameNumber >= ivm.RAMNumFrames {
-	// 		return nil
-	// 	}
-	// 	k.ramFrameTable[frameNumber] = pageNumber
-	// 	(*pageTable)[pageNumber] = frameNumber
-	// 	k.PageWriteRAM(p, pageNumber, *pageTable)
-	// }
-	return nil
+// PageReadDisk reads a page from the Disk at the given page number and page table.
+func (k Kernel) PageReadDisk(pageNumber page.Number, pageTable page.Table) page.Page {
+  frameNumber := pageTable[pageNumber]
+  frame := k.virtualMachine.DiskFrameFetch(frameNumber)
+  return page.Page(frame)
+}
+
+// PageWriteDisk writes the given page to the Disk at the given page numbber.
+func (k Kernel) PageWriteDisk(p page.Page, pageNumber page.Number, pageTable page.Table) {
+  frameNumber := pageTable[pageNumber]
+  frame := ivm.Frame(p)
+  k.virtualMachine.DiskFrameWrite(frameNumber, frame)
 }
 
 // PushProgram pushes a program into the first available space in the VM.
@@ -79,8 +80,24 @@ func (k *Kernel) RAMPushPages(pages []page.Page, pageTable *page.Table) error {
 func (k *Kernel) PushProgram(p prog.Program, pageTable *page.Table) error {
 	// get the pages for the given program
 	// push those pages into the VM and return the result
-	// return k.RAMPushPages(PageArrayFromProgram(program), pageTable)
-  // TODO: make this work
+  pageArray := page.ArrayFromProgram(p)
+  numPages := len(pageArray)
+  if numPages <= k.ramRM.QuantityAvailable() {
+    // there is adequate space in RAM to fit this!!
+    // let's claim some space in RAM and put it in there!
+    frameNumbers, err := k.ramRM.Claim(numPages)
+    if err != nil {
+      return err
+    }
+    // add to the page table (so the process knows to use that space)
+    for pnum, fnum := range frameNumbers {
+      (*pageTable)[page.Number(pnum)] = ivm.FrameNumber(fnum)
+    }
+    // insert the given pages into RAM
+    for pageNumber, p := range pageArray {
+      k.PageWriteRAM(p, page.Number(pageNumber), *pageTable)
+    }
+  }
   return nil
 }
 

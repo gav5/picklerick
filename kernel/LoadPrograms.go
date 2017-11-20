@@ -1,10 +1,10 @@
 package kernel
 
 import (
-	"log"
+	// "log"
 	"../prog"
 	"./page"
-	// "./process"
+	"./process"
 )
 
 // LoadPrograms loads the given programs into the virtual machine.
@@ -18,13 +18,13 @@ func (k *Kernel) LoadPrograms(programs []prog.Program) error {
 }
 
 func (k *Kernel) loadProgram(program prog.Program) error {
-	log.Printf("Loading program %d...\n", program.Job.ID)
+	// log.Printf("Loading program %d...\n", program.Job.ID)
 	// add the given pages into the VM (starting with RAM, then disk)
 	pageTable := page.Table{}
 	if err := k.PushProgram(program, &pageTable); err != nil {
 		return err
 	}
-	// add the add the program (as a process) to the process table
-	// k.addProcessToProcessTable(process.Make(program, pageTable))
+	// add to the process manager
+	k.pm.Add(process.Make(program, pageTable))
 	return nil
 }
