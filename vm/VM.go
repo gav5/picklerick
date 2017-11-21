@@ -58,7 +58,6 @@ func (vm *VM) Run() {
 			go func(c *core.Core, clock Clock) {
 				defer wg.Done()
 				log.Printf("[VM:%d] Sending context to core #%d...\n", clock, coreNum)
-				vm.osKernel.
 				c.CurrentContext = &core.Context{
 					VM: vm,
 					StartPC: 0x00000000,
