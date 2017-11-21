@@ -8,7 +8,6 @@ import (
 	"../config"
 	"log"
 	"sync"
-	"time"
 )
 
 // VM is the virtual computer system.
@@ -22,7 +21,8 @@ type VM struct {
 	receiver disp.ProgressReceiver
 }
 
-const maxCount = 100
+// NOTE: this is how far it goes before it crashes!
+const maxCount = 163
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
@@ -55,30 +55,35 @@ func (vm *VM) Run() {
 		var wg sync.WaitGroup
 		for coreNum, c := range vm.Cores {
 			wg.Add(1)
+			log.Printf("[VM:%d] Sending context to core #%d...\n", vm.Clock, coreNum)
+			c.Apply(&core.Context{
+				VM: vm,
+				NextProcess: vm.osKernel.ProcessForCore(coreNum),
+			})
 			go func(c *core.Core, clock Clock) {
 				defer wg.Done()
-				log.Printf("[VM:%d] Sending context to core #%d...\n", clock, coreNum)
-				c.CurrentContext = &core.Context{
-					VM: vm,
-					StartPC: 0x00000000,
-				}
 				log.Printf("[VM:%d] Running core #%d...\n", clock, coreNum)
 				res := c.Call()
-				// responseChan <- res
+
 				if res.Error != nil {
 					log.Printf(
 						"[VM:%d] Error Running core #%d: %v\n",
-						clock, coreNum, res.Error,
+						clock, res.CoreNum, res.Error,
 					)
 					return
 				}
 				if res.Halted {
-					log.Printf("[VM:%d] Core #%d has been HALTED\n", clock, coreNum)
+					log.Printf("[VM:%d] Core #%d has been HALTED\n", clock, res.CoreNum)
 					return
 				}
 			}(c, vm.Clock)
 		}
 		wg.Wait()
+
+		for _, c := range vm.Cores {
+			c.Save()
+		}
+		vm.osKernel.Tock()
 
 		// check if it's time to be done yet
 		activeCores := ivm.NumCores
@@ -91,10 +96,9 @@ func (vm *VM) Run() {
 			"[VM:%d] %d/%d active cores\n",
 			vm.Clock, activeCores, ivm.NumCores,
 		)
-		if activeCores == 0 {
+		if vm.osKernel.IsDone() {
 			break
 		}
-		time.Sleep(100)
 	}
 }
 

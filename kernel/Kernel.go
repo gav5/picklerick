@@ -8,6 +8,7 @@ import (
   "./processManager"
   "./process"
   "./page"
+  "./scheduler"
   "log"
 )
 
@@ -20,10 +21,6 @@ type Kernel struct {
   pm *processManager.ProcessManager
 }
 
-func noSort(p1, p2 process.Process) bool {
-  return false
-}
-
 // New makes a kernel with the given virtual machine.
 func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
   k := &Kernel{
@@ -31,7 +28,7 @@ func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
     virtualMachine: virtualMachine,
     ramRM: resourceManager.New(ivm.RAMNumFrames),
     diskRM: resourceManager.New(ivm.DiskNumFrames),
-    pm: processManager.New(noSort),
+    pm: processManager.New(scheduler.FIFO),
   }
   // load programs into the system
   var programArray []prog.Program
@@ -45,6 +42,21 @@ func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
     return k, err
   }
   return k, nil
+}
+
+// ProcessForCore returns the appropriate process for the given core.
+func (k Kernel) ProcessForCore(coreNum int) *process.Process {
+  return k.pm.ProcessForCore(coreNum)
+}
+
+// Tock should be called after every cycle completes
+func (k Kernel) Tock() {
+  k.pm.Reevaluate()
+}
+
+// IsDone returns if the system is done yet.
+func (k Kernel) IsDone() bool {
+  return k.pm.IsDone()
 }
 
 // PageReadRAM reads a page from the RAM at the given page number and page table.

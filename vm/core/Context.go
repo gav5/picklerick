@@ -2,12 +2,13 @@ package core
 
 import (
   "../ivm"
+  "../../kernel/process"
 )
 
 // Context describes the current enviornment and task of a CPU Core
 type Context struct {
   VM ivm.IVM
-  StartPC ivm.Address
+  NextProcess *process.Process
 }
 
 // NoContextError describes the event in which no context is provided.

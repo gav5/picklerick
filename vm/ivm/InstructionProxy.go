@@ -1,5 +1,10 @@
 package ivm
 
+// NOTE: this is an import cycle (need a fix for this)
+// import (
+// 	"../../kernel/page"
+// )
+
 // InstructionProxy is used by an instruction to execute VM tasks.
 type InstructionProxy struct {
 	core ICore

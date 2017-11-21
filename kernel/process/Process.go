@@ -59,15 +59,15 @@ type Process struct {
 
 	// Status describes the current status of the process
 	// (ex: if it is running, waiting, etc)
-	// Status Status
+	Status Status
 
 	// statusInfo: any
 	// priority: any
 }
 
-// Make makes a Process from a given program and page table
-func Make(program prog.Program, pageTable page.Table) Process {
-	return Process{
+// New makes a Process from a given program and page table
+func New(program prog.Program, pageTable page.Table) *Process {
+	return &Process{
 		CPUID:          0x0,
 		ProgramCounter: 0x00,
 		CodeSize:       program.Job.NumberOfWords,

@@ -5,6 +5,7 @@ import (
 	"log"
 	"../ivm"
 	"../decoder"
+	"../../kernel/process"
 )
 
 // Core describes a CPU Core in the virtual machine.
@@ -13,7 +14,7 @@ type Core struct {
 	PC         ivm.Address
 	Registers  [ivm.NumCoreRegisters]ivm.Word
 	ShouldHalt bool
-	CurrentContext *Context
+	currentContext *Context
 }
 
 // New makes a new core.
@@ -27,33 +28,52 @@ func New(coreNum uint8) *Core {
 	return core
 }
 
+// Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() Signal {
 	callsign := fmt.Sprintf("[CORE%d:%v]", c.CoreNum, c.PC)
 	log.Printf("%s Begin execution\n", callsign)
-	if c.CurrentContext == nil {
+	if c.currentContext == nil {
 		log.Printf("%s ERR NO CONTEXT\n", callsign)
-		return Signal{Error: NoContextError{}, Halted: false}
+		return Signal{CoreNum: c.CoreNum, Error: NoContextError{}, Halted: false}
 	}
-	instructionRAW := c.CurrentContext.VM.RAMAddressFetchUint32(c.PC)
+	instructionRAW := c.currentContext.VM.RAMAddressFetchUint32(c.PC)
 	log.Printf("%s InstructionRAW: %08X\n", callsign, instructionRAW)
 	instruction, err := decoder.DecodeInstruction(instructionRAW)
 	if err != nil {
 		log.Printf("%s INSTR DECODE ERR: %v\n", callsign, err)
-		return Signal{Error: err, Halted: false}
+		return Signal{CoreNum: c.CoreNum, Error: err, Halted: false}
 	}
 	log.Printf("%s Decoded to: %s\n", callsign, instruction.Assembly())
-	ip := c.CurrentContext.VM.InstructionProxy(c)
+	ip := c.currentContext.VM.InstructionProxy(c)
 	log.Printf("%s Executing instruction...\n", callsign)
 	instruction.Execute(ip)
 	log.Printf("%s Instruction executed!\n", callsign)
 	if c.ShouldHalt {
 		log.Printf("%s HALTED!\n", callsign)
-		return Signal{Error: nil, Halted: true}
+		return Signal{CoreNum: c.CoreNum, Error: nil, Halted: true}
 	}
 	defer func() {
 		c.PC += 4
 	}()
-	return Signal{Error: nil, Halted: false}
+	return Signal{CoreNum: c.CoreNum, Error: nil, Halted: false}
+}
+
+// Apply a context to the given CPU Core.
+func (c *Core) Apply(context *Context) {
+	c.ShouldHalt = false
+	c.PC = context.NextProcess.ProgramCounter
+	context.NextProcess.CPUID = c.CoreNum
+	copy(c.Registers[:], context.NextProcess.Registers[:])
+	c.currentContext = context
+}
+
+// Save applies the CPU Core's current state to the process.
+func (c *Core) Save() {
+	c.currentContext.NextProcess.ProgramCounter = c.PC
+	copy(c.currentContext.NextProcess.Registers[:], c.Registers[:])
+	if c.ShouldHalt {
+		c.currentContext.NextProcess.Status = process.Done
+	}
 }
 
 // Run runs the core.

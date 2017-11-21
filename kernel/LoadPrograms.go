@@ -1,7 +1,6 @@
 package kernel
 
 import (
-	// "log"
 	"../prog"
 	"./page"
 	"./process"
@@ -25,6 +24,6 @@ func (k *Kernel) loadProgram(program prog.Program) error {
 		return err
 	}
 	// add to the process manager
-	k.pm.Add(process.Make(program, pageTable))
+	k.pm.Add(*process.New(program, pageTable))
 	return nil
 }
