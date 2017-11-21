@@ -6,6 +6,9 @@ import (
 	"./core"
 	"../kernel"
 	"../config"
+	"log"
+	"sync"
+	"time"
 )
 
 // VM is the virtual computer system.
@@ -19,23 +22,22 @@ type VM struct {
 	receiver disp.ProgressReceiver
 }
 
-const maxCount = 1000000
+const maxCount = 100
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
 	progress := make(chan disp.Progress)
 	vm := &VM{
 		Clock: 0x00000000,
-		Cores: [ivm.NumCores]*core.Core{
-			core.New(0),
-			core.New(1),
-			core.New(2),
-			core.New(3),
-		},
+		Cores: [ivm.NumCores]*core.Core{},
 		RAM:  MakeRAM(),
 		Disk: Disk{},
 		reporter: disp.ProgressReporter(progress),
 		receiver: disp.ProgressReceiver(progress),
+	}
+	// build each CPU Core
+	for coreNum := uint8(0); coreNum < ivm.NumCores; coreNum++ {
+		vm.Cores[coreNum] = core.New(coreNum)
 	}
 	// setup and configure the kernel
 	var err error
@@ -47,37 +49,54 @@ func New(c config.Config) (*VM, error) {
 }
 
 // Run runs the virtual machine.
-func (vm *VM) Run() disp.ProgressReceiver {
-	go func() {
-		// run each core in its own goroutine
-		for _, core := range vm.Cores {
-			coreReceiver := core.Run(vm)
-			go func() {
-				for count := 0; count < maxCount; count++ {
-					pr := <- coreReceiver
-					vm.reporter <- pr
-					if pr.Value == 1.0 {
-						break
-					}
+func (vm *VM) Run() {
+	for vm.Clock = 0x00000000; vm.Clock < maxCount; vm.Clock++ {
+		log.Printf("[VM:%d] Tick!\n", vm.Clock)
+		var wg sync.WaitGroup
+		for coreNum, c := range vm.Cores {
+			wg.Add(1)
+			go func(c *core.Core, clock Clock) {
+				defer wg.Done()
+				log.Printf("[VM:%d] Sending context to core #%d...\n", clock, coreNum)
+				vm.osKernel.
+				c.CurrentContext = &core.Context{
+					VM: vm,
+					StartPC: 0x00000000,
 				}
-				vm.reporter <- disp.Progress{Title: "Timeout", Value: 1.0}
-			}()
+				log.Printf("[VM:%d] Running core #%d...\n", clock, coreNum)
+				res := c.Call()
+				// responseChan <- res
+				if res.Error != nil {
+					log.Printf(
+						"[VM:%d] Error Running core #%d: %v\n",
+						clock, coreNum, res.Error,
+					)
+					return
+				}
+				if res.Halted {
+					log.Printf("[VM:%d] Core #%d has been HALTED\n", clock, coreNum)
+					return
+				}
+			}(c, vm.Clock)
 		}
-		// for i := 0; i < iter/2; i++ {
-		// 	progress <- disp.Progress{
-		// 		"Doing Thing (Part 1)",
-		// 		float32(i) / iter,
-		// 	}
-		// }
-		// for i := iter / 2; i < iter; i++ {
-		// 	progress <- disp.Progress{
-		// 		"Doing Thing (Part 2)",
-		// 		float32(i) / iter,
-		// 	}
-		// }
-		// progress <- disp.Progress{"Done!", 1.0}
-	}()
-	return vm.receiver
+		wg.Wait()
+
+		// check if it's time to be done yet
+		activeCores := ivm.NumCores
+		for _, c := range vm.Cores {
+			if c.ShouldHalt {
+				activeCores--
+			}
+		}
+		log.Printf(
+			"[VM:%d] %d/%d active cores\n",
+			vm.Clock, activeCores, ivm.NumCores,
+		)
+		if activeCores == 0 {
+			break
+		}
+		time.Sleep(100)
+	}
 }
 
 // InstructionProxy makes an instruction proxy for the given core

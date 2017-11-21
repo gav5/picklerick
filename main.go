@@ -32,15 +32,7 @@ func main() {
 		return
 	}
 
-	pChan := virtualMachine.Run()
-
-	for {
-		p := <-pChan
-		log.Printf("[%3d%%]: %s", int(p.Value*100), p.Title)
-		if p.Value == 1.0 {
-			break
-		}
-	}
+	virtualMachine.Run()
 	log.Printf("done!\n")
 
 	// fmt.Print("RAM Dump:\n")

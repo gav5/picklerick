@@ -2,8 +2,7 @@ package core
 
 import (
 	"fmt"
-
-	"../../disp"
+	"log"
 	"../ivm"
 	"../decoder"
 )
@@ -14,61 +13,89 @@ type Core struct {
 	PC         ivm.Address
 	Registers  [ivm.NumCoreRegisters]ivm.Word
 	ShouldHalt bool
-	reporter disp.ProgressReporter
-	receiver disp.ProgressReceiver
+	CurrentContext *Context
 }
 
 // New makes a new core.
 func New(coreNum uint8) *Core {
-	progress := make(chan disp.Progress)
 	core := &Core{
 		CoreNum:    coreNum,
 		PC:         0x00000000,
 		Registers:  [ivm.NumCoreRegisters]ivm.Word{},
 		ShouldHalt: false,
-		reporter: disp.ProgressReporter(progress),
-		receiver: disp.ProgressReceiver(progress),
 	}
 	return core
 }
 
-// Run runs the core.
-func (c *Core) Run(vm ivm.IVM) disp.ProgressReceiver {
-	go func() {
-		c.PC = 0x00000000
-		for {
-			instructionRAW := vm.RAMAddressFetchUint32(c.PC)
-			instruction, err := decoder.DecodeInstruction(instructionRAW)
-			if err != nil {
-				c.reporter <- disp.Progress{
-					fmt.Sprintf("ERR: %v", err),
-					1.0,
-				}
-				break
-			}
-			ip := vm.InstructionProxy(c)
-			instruction.Execute(ip)
-			asmString := instruction.Assembly()
-			if c.ShouldHalt {
-				c.reporter <- disp.Progress{
-					fmt.Sprintf("[%d] HALT", c.CoreNum),
-					1.0,
-				}
-				break
-			} else {
-				c.reporter <- disp.Progress{
-					fmt.Sprintf(
-						"[%d] RUN %v <%v: %08X>",
-						c.CoreNum, asmString, c.PC, instructionRAW,
-					),
-					0.0,
-				}
-			}
-			c.PC += 4
-		}
+func (c *Core) Call() Signal {
+	callsign := fmt.Sprintf("[CORE%d:%v]", c.CoreNum, c.PC)
+	log.Printf("%s Begin execution\n", callsign)
+	if c.CurrentContext == nil {
+		log.Printf("%s ERR NO CONTEXT\n", callsign)
+		return Signal{Error: NoContextError{}, Halted: false}
+	}
+	instructionRAW := c.CurrentContext.VM.RAMAddressFetchUint32(c.PC)
+	log.Printf("%s InstructionRAW: %08X\n", callsign, instructionRAW)
+	instruction, err := decoder.DecodeInstruction(instructionRAW)
+	if err != nil {
+		log.Printf("%s INSTR DECODE ERR: %v\n", callsign, err)
+		return Signal{Error: err, Halted: false}
+	}
+	log.Printf("%s Decoded to: %s\n", callsign, instruction.Assembly())
+	ip := c.CurrentContext.VM.InstructionProxy(c)
+	log.Printf("%s Executing instruction...\n", callsign)
+	instruction.Execute(ip)
+	log.Printf("%s Instruction executed!\n", callsign)
+	if c.ShouldHalt {
+		log.Printf("%s HALTED!\n", callsign)
+		return Signal{Error: nil, Halted: true}
+	}
+	defer func() {
+		c.PC += 4
 	}()
-	return c.receiver
+	return Signal{Error: nil, Halted: false}
 }
+
+// Run runs the core.
+// func (c *Core) Run(vm ivm.IVM) *Endpoint {
+// 	go func() {
+// 		c.PC = 0x00000000
+// 		for {
+// 			// wait until the VM says to go
+// 			tickSignal := <- c.tickChannel
+//
+// 			// stop if the VM says to do so
+// 			// (otherwise, keep going)
+// 			if tickSignal.ShouldStop {
+// 				close(c.tockChannel)
+// 				return
+// 			}
+//
+// 			instructionRAW := vm.RAMAddressFetchUint32(c.PC)
+// 			instruction, err := decoder.DecodeInstruction(instructionRAW)
+// 			if err != nil {
+// 				log.Printf("[%d] ERR: %v\n", c.CoreNum, err)
+// 				c.tockChannel <- Tock{Error: err, Halted: false}
+// 				break
+// 			}
+// 			ip := vm.InstructionProxy(c)
+// 			instruction.Execute(ip)
+// 			log.Printf("[%d] %s\n", c.CoreNum, instruction.Assembly())
+// 			if c.ShouldHalt {
+// 				log.Printf("[%d] HALTING...\n", c.CoreNum)
+// 				c.tockChannel <- Tock{Error: nil, Halted: true}
+// 				break
+// 			} else {
+// 				c.tockChannel <- Tock{Error: nil, Halted: false}
+// 			}
+// 			c.PC += 4
+// 		}
+// 	}()
+// 	return &Endpoint{
+// 		TickSender: (chan<- Tick)(c.tickChannel),
+// 		TockReceiver: (<-chan Tock)(c.tockChannel),
+// 	}
+// }
 
 // ProgramCounter returns the value of the program counter (PC).
 func (c Core) ProgramCounter() ivm.Address {
