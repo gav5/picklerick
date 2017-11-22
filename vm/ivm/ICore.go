@@ -31,4 +31,7 @@ type ICore interface {
 	// Managing Registers as bool
 	RegisterBool(RegisterDesignation) bool
 	SetRegisterBool(RegisterDesignation, bool)
+
+	// Used for paging
+	PagingProxy() PagingProxy
 }

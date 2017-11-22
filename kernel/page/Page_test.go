@@ -8,6 +8,50 @@ import (
   "../../prog"
 )
 
+var translateAddressTests = []struct {
+  pt Table
+  in ivm.Address
+  out ivm.Address
+}{
+  {
+    pt: Table{0: 0},
+    in: 0x00000000,
+    out: 0x00000000,
+  },
+  {
+    pt: Table{1: 0},
+    in: 0x4,
+    out: 0x0,
+  },
+  {
+    pt: Table{1: 0},
+    in: 0x5,
+    out: 0x1,
+  },
+  {
+    pt: Table{1: 0},
+    in: 0x6,
+    out: 0x2,
+  },
+  {
+    pt: Table{1: 0},
+    in: 0x7,
+    out: 0x3,
+  },
+}
+
+func TestTranslateAddress(t *testing.T) {
+  for _, tt := range translateAddressTests {
+    addr := tt.pt.TranslateAddress(tt.in)
+    if addr != tt.out {
+      t.Errorf(
+        "[%v].TranslateAddress(%v) => %v (expected %v)\n",
+        tt.pt, tt.in, addr, tt.out,
+      )
+    }
+  }
+}
+
 var arrayFromFrameArrayTests = []struct {
   in []ivm.Frame
   out []Page

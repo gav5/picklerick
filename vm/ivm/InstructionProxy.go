@@ -1,21 +1,21 @@
 package ivm
 
-// NOTE: this is an import cycle (need a fix for this)
-// import (
-// 	"../../kernel/page"
-// )
-
 // InstructionProxy is used by an instruction to execute VM tasks.
 type InstructionProxy struct {
 	core ICore
 	ram  IRAM
+	pagingProxy PagingProxy
 }
 
+// PagingProxy is a function that translates an address for paging.
+type PagingProxy func(addr Address) Address
+
 // MakeInstructionProxy makes an InstructionProxy instance
-func MakeInstructionProxy(core ICore, ram IRAM) InstructionProxy {
+func MakeInstructionProxy(core ICore, ram IRAM, pp PagingProxy) InstructionProxy {
 	return InstructionProxy{
 		core: core,
 		ram:  ram,
+		pagingProxy: pp,
 	}
 }
 
@@ -76,40 +76,48 @@ func (ip InstructionProxy) SetRegisterBool(regNum RegisterDesignation, val bool)
 
 // AddressFetchWord returns the word value at the given address.
 func (ip InstructionProxy) AddressFetchWord(addr Address) Word {
-	return ip.ram.AddressFetchWord(addr)
+	frameAddr := ip.pagingProxy(addr)
+	return ip.ram.AddressFetchWord(frameAddr)
 }
 
 // AddressWriteWord writes the given word value to the given address.
 func (ip InstructionProxy) AddressWriteWord(addr Address, val Word) {
-	ip.ram.AddressWriteWord(addr, val)
+	frameAddr := ip.pagingProxy(addr)
+	ip.ram.AddressWriteWord(frameAddr, val)
 }
 
 // AddressFetchUint32 returns the uint32 value at the given address.
 func (ip InstructionProxy) AddressFetchUint32(addr Address) uint32 {
-	return ip.ram.AddressFetchUint32(addr)
+	frameAddr := ip.pagingProxy(addr)
+	return ip.ram.AddressFetchUint32(frameAddr)
 }
 
 // AddressWriteUint32 writes the given uint32 value to the given address.
 func (ip InstructionProxy) AddressWriteUint32(addr Address, val uint32) {
-	ip.ram.AddressWriteUint32(addr, val)
+	frameAddr := ip.pagingProxy(addr)
+	ip.ram.AddressWriteUint32(frameAddr, val)
 }
 
 // AddressFetchInt32 returns the int32 value at the given address.
 func (ip InstructionProxy) AddressFetchInt32(addr Address) int32 {
-	return ip.ram.AddressFetchInt32(addr)
+	frameAddr := ip.pagingProxy(addr)
+	return ip.ram.AddressFetchInt32(frameAddr)
 }
 
 // AddressWriteInt32 writes the given int32 value to the given address.
 func (ip InstructionProxy) AddressWriteInt32(addr Address, val int32) {
-	ip.ram.AddressWriteInt32(addr, val)
+	frameAddr := ip.pagingProxy(addr)
+	ip.ram.AddressWriteInt32(frameAddr, val)
 }
 
 // AddressFetchBool returns the bool value at the given address.
 func (ip InstructionProxy) AddressFetchBool(addr Address) bool {
-	return ip.ram.AddressFetchBool(addr)
+	frameAddr := ip.pagingProxy(addr)
+	return ip.ram.AddressFetchBool(frameAddr)
 }
 
 // AddressWriteBool writes the given bool value to the given address.
 func (ip InstructionProxy) AddressWriteBool(addr Address, val bool) {
-	ip.ram.AddressWriteBool(addr, val)
+	frameAddr := ip.pagingProxy(addr)
+	ip.ram.AddressWriteBool(frameAddr, val)
 }

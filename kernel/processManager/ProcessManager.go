@@ -34,6 +34,9 @@ func New(sortMethod SortMethod) *ProcessManager {
 
 // ProcessForCore returns the appropriate process for the given core.
 func (pm ProcessManager) ProcessForCore(coreNum int) *process.Process {
+  if coreNum >= pm.processList.Len() {
+    return nil
+  }
   return &pm.processList.base[coreNum]
 }
 
@@ -49,9 +52,12 @@ func (pm ProcessManager) ProcessesForQueue() []*process.Process {
 
 // Reevaluate re-sorts the current process list and excludes unnecessary ones.
 func (pm ProcessManager) Reevaluate() {
-  for i, p := range pm.processList.base[:ivm.NumCores] {
+  for i, p := range pm.processList.base[:pm.processList.Len()-1] {
     if p.Status == process.Done {
-      log.Printf("process %d has now been completed!\n", p.ProcessNumber)
+      log.Printf(
+        "process %d has now been completed! [%d/%d]\n",
+        p.ProcessNumber, i, pm.processList.Len(),
+      )
       pm.processList.base = append(
         pm.processList.base[:i],
         pm.processList.base[i+1:]...,

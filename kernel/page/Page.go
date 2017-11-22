@@ -16,6 +16,14 @@ type Table map[Number]ivm.FrameNumber
 
 type frameTableType map[ivm.FrameNumber]Number
 
+// TranslateAddress translates a paged address into a raw frame Address.
+func (pt Table) TranslateAddress(addr ivm.Address) ivm.Address {
+	pageNumber := Number(addr / ivm.FrameSize)
+	frameAddress := addr % ivm.FrameSize
+	frameNumber := pt[pageNumber]
+	return ivm.Address(frameNumber * ivm.FrameSize) + frameAddress
+}
+
 // UsedFrameNumbers returns the frame numbers already used by the page table.
 func (pt Table) UsedFrameNumbers() []ivm.FrameNumber {
 	frameNumbers := []ivm.FrameNumber{}

@@ -22,7 +22,7 @@ type VM struct {
 }
 
 // NOTE: this is how far it goes before it crashes!
-const maxCount = 163
+const maxCount = 10000000
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
@@ -37,7 +37,7 @@ func New(c config.Config) (*VM, error) {
 	}
 	// build each CPU Core
 	for coreNum := uint8(0); coreNum < ivm.NumCores; coreNum++ {
-		vm.Cores[coreNum] = core.New(coreNum)
+		vm.Cores[coreNum] = core.New(coreNum, vm)
 	}
 	// setup and configure the kernel
 	var err error
@@ -55,11 +55,19 @@ func (vm *VM) Run() {
 		var wg sync.WaitGroup
 		for coreNum, c := range vm.Cores {
 			wg.Add(1)
-			log.Printf("[VM:%d] Sending context to core #%d...\n", vm.Clock, coreNum)
-			c.Apply(&core.Context{
-				VM: vm,
-				NextProcess: vm.osKernel.ProcessForCore(coreNum),
-			})
+			if p := vm.osKernel.ProcessForCore(coreNum); p != nil {
+				log.Printf(
+					"[VM:%d] Sending process #%d to core #%d...\n",
+					vm.Clock, p.ProcessNumber, coreNum,
+				)
+				c.Apply(p)
+			} else {
+				log.Printf(
+					"[VM:%d] No Process Provided For Core #%d!\n",
+					vm.Clock, coreNum,
+				)
+				c.Apply(nil)
+			}
 			go func(c *core.Core, clock Clock) {
 				defer wg.Done()
 				log.Printf("[VM:%d] Running core #%d...\n", clock, coreNum)
@@ -104,7 +112,7 @@ func (vm *VM) Run() {
 
 // InstructionProxy makes an instruction proxy for the given core
 func (vm VM) InstructionProxy(c ivm.ICore) ivm.InstructionProxy {
-	return ivm.MakeInstructionProxy(c, &vm.RAM)
+	return ivm.MakeInstructionProxy(c, &vm.RAM, c.PagingProxy())
 }
 
 // ProgramCounter returns the value of the program counter (PC).
