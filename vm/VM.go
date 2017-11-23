@@ -22,7 +22,7 @@ type VM struct {
 }
 
 // NOTE: this is how far it goes before it crashes!
-const maxCount = 10000000
+const maxCount = 1000000
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
@@ -53,35 +53,36 @@ func (vm *VM) Run() {
 	for vm.Clock = 0x00000000; vm.Clock < maxCount; vm.Clock++ {
 		log.Printf("[VM:%d] Tick!\n", vm.Clock)
 		var wg sync.WaitGroup
-		for coreNum, c := range vm.Cores {
+		for _, c := range vm.Cores {
 			wg.Add(1)
-			if p := vm.osKernel.ProcessForCore(coreNum); p != nil {
-				log.Printf(
-					"[VM:%d] Sending process #%d to core #%d...\n",
-					vm.Clock, p.ProcessNumber, coreNum,
-				)
-				c.Apply(p)
+			if !vm.osKernel.IsDone() {
+				p := vm.osKernel.PopProcess()
+				// log.Printf(
+				// 	"[VM:%d] Sending process #%d to core #%d...\n",
+				// 	vm.Clock, p.ProcessNumber, coreNum,
+				// )
+				c.Apply(&p)
 			} else {
-				log.Printf(
-					"[VM:%d] No Process Provided For Core #%d!\n",
-					vm.Clock, coreNum,
-				)
+				// log.Printf(
+				// 	"[VM:%d] No Process Provided For Core #%d!\n",
+				// 	vm.Clock, coreNum,
+				// )
 				c.Apply(nil)
 			}
 			go func(c *core.Core, clock Clock) {
 				defer wg.Done()
-				log.Printf("[VM:%d] Running core #%d...\n", clock, coreNum)
+				// log.Printf("[VM:%d] Running core #%d...\n", clock, coreNum)
 				res := c.Call()
 
 				if res.Error != nil {
-					log.Printf(
-						"[VM:%d] Error Running core #%d: %v\n",
-						clock, res.CoreNum, res.Error,
-					)
+					// log.Printf(
+					// 	"[VM:%d] Error Running core #%d: %v\n",
+					// 	clock, res.CoreNum, res.Error,
+					// )
 					return
 				}
 				if res.Halted {
-					log.Printf("[VM:%d] Core #%d has been HALTED\n", clock, res.CoreNum)
+					// log.Printf("[VM:%d] Core #%d has been HALTED\n", clock, res.CoreNum)
 					return
 				}
 			}(c, vm.Clock)
@@ -91,7 +92,7 @@ func (vm *VM) Run() {
 		for _, c := range vm.Cores {
 			c.Save()
 		}
-		vm.osKernel.Tock()
+		// vm.osKernel.Tock()
 
 		// check if it's time to be done yet
 		activeCores := ivm.NumCores
@@ -106,6 +107,11 @@ func (vm *VM) Run() {
 		)
 		if vm.osKernel.IsDone() {
 			break
+		} else {
+			log.Printf(
+				"[VM:%d] %d processes left\n",
+				vm.Clock, vm.osKernel.NumProcessesLeft(),
+			)
 		}
 	}
 }

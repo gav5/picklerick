@@ -45,18 +45,28 @@ func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
 }
 
 // ProcessForCore returns the appropriate process for the given core.
-func (k Kernel) ProcessForCore(coreNum int) *process.Process {
-  return k.pm.ProcessForCore(coreNum)
-}
+// func (k Kernel) ProcessForCore(coreNum int) *process.Process {
+//   return k.pm.ProcessForCore(coreNum)
+// }
 
 // Tock should be called after every cycle completes
-func (k Kernel) Tock() {
-  k.pm.Reevaluate()
+// func (k Kernel) Tock() {
+//   k.pm.Reevaluate()
+// }
+
+// PopProcess removes the frontmost process off the queue and returns it.
+func (k Kernel) PopProcess() process.Process {
+  return k.pm.Pop()
 }
 
 // IsDone returns if the system is done yet.
 func (k Kernel) IsDone() bool {
   return k.pm.IsDone()
+}
+
+// NumProcessesLeft returns the number of processes still left in the queue.
+func (k Kernel) NumProcessesLeft() int {
+  return k.pm.NumLeft()
 }
 
 // PageReadRAM reads a page from the RAM at the given page number and page table.

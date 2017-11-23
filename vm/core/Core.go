@@ -1,7 +1,7 @@
 package core
 
 import (
-	"fmt"
+	// "fmt"
 	"log"
 	"../ivm"
 	"../decoder"
@@ -32,30 +32,30 @@ func New(coreNum uint8, virtualMachine ivm.IVM) *Core {
 
 // Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() Signal {
-	callsign := fmt.Sprintf("[CORE%d:%v]", c.CoreNum, c.PC)
-	log.Printf("%s Begin execution\n", callsign)
+	// callsign := fmt.Sprintf("[CORE%d:%v]", c.CoreNum, c.PC)
+	// log.Printf("%s Begin execution\n", callsign)
 	if c.currentProcess == nil {
-		log.Printf("%s NO PROCESS\n", callsign)
+		// log.Printf("%s NO PROCESS\n", callsign)
 		return Signal{CoreNum: c.CoreNum, Error: nil, Halted: true}
 	}
 	ip := c.virtualMachine.InstructionProxy(c)
-	log.Printf(
-		"%s Fetching instruction from address: %v => %v\n",
-		callsign, c.PC, c.PagingProxy()(c.PC),
-	)
+	// log.Printf(
+	// 	"%s Fetching instruction from address: %v => %v\n",
+	// 	callsign, c.PC, c.PagingProxy()(c.PC),
+	// )
 	instructionRAW := ip.AddressFetchUint32(c.PC)
-	log.Printf("%s InstructionRAW: %08X\n", callsign, instructionRAW)
+	// log.Printf("%s InstructionRAW: %08X\n", callsign, instructionRAW)
 	instruction, err := decoder.DecodeInstruction(instructionRAW)
 	if err != nil {
-		log.Printf("%s INSTR DECODE ERR: %v\n", callsign, err)
+		// log.Printf("%s INSTR DECODE ERR: %v\n", callsign, err)
 		return Signal{CoreNum: c.CoreNum, Error: err, Halted: false}
 	}
-	log.Printf("%s Decoded to: %s\n", callsign, instruction.Assembly())
-	log.Printf("%s Executing instruction...\n", callsign)
+	// log.Printf("%s Decoded to: %s\n", callsign, instruction.Assembly())
+	// log.Printf("%s Executing instruction...\n", callsign)
 	instruction.Execute(ip)
-	log.Printf("%s Instruction executed!\n", callsign)
+	// log.Printf("%s Instruction executed!\n", callsign)
 	if c.ShouldHalt {
-		log.Printf("%s HALTED!\n", callsign)
+		// log.Printf("%s HALTED!\n", callsign)
 		return Signal{CoreNum: c.CoreNum, Error: nil, Halted: true}
 	}
 	defer func() {
@@ -67,18 +67,15 @@ func (c *Core) Call() Signal {
 // Apply a process to the given CPU Core.
 func (c *Core) Apply(p *process.Process) {
 	if p == nil {
-		log.Printf("Nothing for CPU #%d to do!\n", c.CoreNum)
+		log.Printf("[CPU%d] NO JOB\n", c.CoreNum)
 		c.currentProcess = nil
+		c.ShouldHalt = true
 		return
 	}
 	if c.currentProcess != p {
 		log.Printf(
-			"Loading job #%d onto CPU #%d\n",
-			p.ProcessNumber, c.CoreNum,
-		)
-		log.Printf(
-			"CPU #%d page table now:%v\n",
-			c.CoreNum, p.PageTable,
+			"[CPU%d] Job #%d\n",
+			c.CoreNum, p.ProcessNumber,
 		)
 		c.ShouldHalt = false
 		c.PC = p.ProgramCounter
