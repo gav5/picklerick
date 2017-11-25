@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"../ivm"
-	
+
 )
 
 // MOVI transfers address/data directly into a register
@@ -14,7 +14,9 @@ type MOVI struct {
 
 // Execute runs the given MOVI instruction
 func (i MOVI) Execute(ip ivm.InstructionProxy) {
-	// TODO: make this actually do what it's supposed to do
+	address := ip.RegisterBool(i.args.Address)	// get source address
+	source := AddressFetchWord(address) // fetch source
+	ip.SetRegisterBool(i.args.Destination, source)
 }
 
 // Assembly returns the representation in assembly language
