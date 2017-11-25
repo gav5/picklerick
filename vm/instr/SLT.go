@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"../ivm"
-
 )
 
 // SLT sets the destination register to 1 if the first source register is less than the
