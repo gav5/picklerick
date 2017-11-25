@@ -15,12 +15,12 @@ type SLTI struct {
 
 // Execute runs the given SLTI instruction
 func (i SLTI) Execute(ip ivm.InstructionProxy) {
-	source1 := ip.RegisterBool(i.args.Source1)
-	source2 := ip.RegisterBool(i.args.Source2)
-	if(source1<source2){
-		ip.SetRegisterBool(i.args.Destination, 1)
+	base := ip.RegisterWord(i.args.Base)
+	data := ivm.Word(i.args.Address)
+	if base < data {
+		ip.SetRegisterBool(i.args.Destination, true)
 	} else {
-		ip.SetRegisterBool(i.args.Destination, 0)
+		ip.SetRegisterBool(i.args.Destination, false)
 	}
 }
 

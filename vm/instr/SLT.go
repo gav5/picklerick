@@ -15,12 +15,12 @@ type SLT struct {
 
 // Execute runs the given SLT instruction
 func (i SLT) Execute(ip ivm.InstructionProxy) {
-	source1 := ip.RegisterBool(i.args.Source1)
-	source2 := ip.RegisterBool(i.args.Source2)
-	if(source1<source2){
-		ip.SetRegisterBool(i.args.Destination, 1)
+	source1 := ip.RegisterUint32(i.args.Source1)
+	source2 := ip.RegisterUint32(i.args.Source2)
+	if source1 < source2 {
+		ip.SetRegisterBool(i.args.Destination, true)
 	} else {
-		ip.SetRegisterBool(i.args.Destination, 0)
+		ip.SetRegisterBool(i.args.Destination, false)
 	}
 }
 

@@ -14,8 +14,8 @@ type MOV struct {
 
 // Execute runs the given MOV instruction
 func (i MOV) Execute(ip ivm.InstructionProxy) {
-	source := ip.RegisterBool(i.args.Source)
-	ip.SetRegisterBool(i.args.Destination, source)
+	source := ip.RegisterUint32(i.args.Source1)
+	ip.SetRegisterUint32(i.args.Destination, source)
 }
 
 // Assembly returns the representation in assembly language
