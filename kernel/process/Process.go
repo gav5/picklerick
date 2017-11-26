@@ -57,7 +57,7 @@ type Process struct {
 	Status Status
 }
 
-// Make makes a Process from a given program and page table
+// Make makes a Process from a given program
 func Make(p program.Program) Process {
 	return Process{
 		CPUID:          0x0,
@@ -72,4 +72,13 @@ func Make(p program.Program) Process {
 		State:					ivm.MakeState(),
 		Status:					New,
 	}
+}
+
+// MakeArray makes an array of Processes from a given array of programs.
+func MakeArray(progAry []program.Program) []Process {
+	outary := make([]Process, len(progAry))
+	for i, prog := range progAry {
+		outary[i] = Make(prog)
+	}
+	return outary
 }

@@ -59,7 +59,8 @@ func (pm PageManager) AvailableRAM() int {
 // Load makes sure the given pages are in RAM.
 func (pm *PageManager) Load(p *process.Process) error {
   // the initial claim will be the instructions and data footprint
-  initialClaim := len(p.Program.Instructions) + p.Footprint
+  // initialClaim := len(p.Program.Instructions) + p.Footprint
+  initialClaim := len(p.DiskPageTable)
   frameNums, err := pm.ramRM.Claim(initialClaim)
   if err != nil {
     return err

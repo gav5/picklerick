@@ -69,6 +69,10 @@ func (vm *VM) Run() error {
 	return nil
 }
 
+func (vm *VM) Tick() {
+	vm.tick()
+}
+
 func (vm *VM) runCycle() error {
 
 	// ensure the calls for Tick and Tock to the Kernel

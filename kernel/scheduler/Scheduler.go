@@ -2,6 +2,7 @@ package scheduler
 
 import (
   "container/heap"
+  "sort"
   "io"
   "fmt"
   // "log"
@@ -16,35 +17,45 @@ type Scheduler struct {
   processList *processList
   completed []process.Process
   pm *pageManager.PageManager
+  methodName string
 }
 
 // New creates a new scheduler.
-func New(sortMethod Method, pm *pageManager.PageManager) *Scheduler {
+func New(m string, p *pageManager.PageManager, a []program.Program) *Scheduler {
   sched := &Scheduler{
     processList: &processList{
-      base: []process.Process{},
-      sortMethod: sortMethod,
+      base: process.MakeArray(a),
+      sortMethod: MethodForSwitch(m),
     },
     completed: []process.Process{},
-    pm: pm,
+    pm: p,
+    methodName: m,
   }
-  heap.Init(sched.processList)
+
+  // sort the whole thing
+  sort.Sort(sched.processList)
+
+  // make sure each process is set up with the page manager
+  sched.Each(func(p *process.Process) {
+    sched.pm.Setup(p)
+  })
   return sched
 }
 
 // Import brings in a list of programs.
-func (sched Scheduler) Import(pary []program.Program) {
-  for _, prog := range pary {
-    proc := process.Make(prog)
-    sched.Push(proc)
-  }
-}
+// func (sched Scheduler) Import(pary []program.Program) {
+//   for i, prog := range pary {
+//     proc := process.Make(prog)
+//     sched.Push(proc)
+//     // heap.Fix(sched.processList, i)
+//   }
+// }
 
 // Push adds a process to the list to be executed.
-func (sched Scheduler) Push(p process.Process) {
-  sched.processList.Push(p)
-  sched.pm.Setup(&p)
-}
+// func (sched Scheduler) Push(p process.Process) {
+//   sched.processList.Push(p)
+//   sched.pm.Setup(&p)
+// }
 
 // Tick is used to signal the start of a virtual machine cycle to the kernel.
 // This sets up processes and resources before the next cycle begins.
@@ -164,8 +175,8 @@ func (sched Scheduler) findPair(fn func(*process.Process) bool) (int, *process.P
 func (sched Scheduler) FprintProcessTable(w io.Writer) error {
   combined := append(sched.processList.base, sched.completed...)
   header := fmt.Sprintf(
-    "Process Table (%d Processes)\n",
-    len(combined),
+    "Process Table (%d Processes, sorted using %s)\n",
+    len(combined), sched.methodName,
   )
   if _, err := w.Write([]byte(header)); err != nil {
     return err
@@ -173,9 +184,9 @@ func (sched Scheduler) FprintProcessTable(w io.Writer) error {
   for i := len(combined)-1; i >= 0; i-- {
     p := combined[i]
     out := fmt.Sprintf(
-      "[%02d] %v p%02d {%v} {%v}\n",
+      "[%02d] %v p%02d (%d instructions) {RAM: %d pages} {Disk: %d pages}\n",
       p.ProcessNumber, p.Status, p.Priority,
-      p.RAMPageTable, p.DiskPageTable,
+      p.CodeSize, len(p.RAMPageTable), len(p.DiskPageTable),
     )
     if _, err := w.Write([]byte(out)); err != nil {
       return err

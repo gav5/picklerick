@@ -33,3 +33,6 @@ func (pl *processList) Pop() interface{} {
   (*pl).base = old[0:n-1]
   return x
 }
+
+// NOTE: need to load into ProcessManager first
+// (then add elements to RAM, add remaining to disk)

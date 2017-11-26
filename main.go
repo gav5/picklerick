@@ -32,44 +32,19 @@ func main() {
 		log.Fatalf("error building virtual machine: %v", err)
 		return
 	}
+	virtualMachine.Tick()
 
 	fmt.Println()
 	_ = virtualMachine.FprintProcessTable(os.Stdout)
 
-	virtualMachine.Run()
-	// log.Printf("done!\n")
+	// fmt.Println()
+	// virtualMachine.Run()
 
-	// fmt.Print("RAM Dump:\n")
-	// _ = virtualMachine.RAM.Print()
-	// fmt.Print("\n")
+	fmt.Print("\nRAM Dump:\n")
+	_ = virtualMachine.RAM.Print()
+	fmt.Print("\n")
 
-	// fmt.Print("Disk Dump:\n")
-	// _ = virtualMachine.Disk.Print()
-	// fmt.Print("\n")
-
-	// disp.RunTask(virtualMachine)
-
-	// c := cpu.State{}
-
-	// if len(sharedConfig.Outdir) > 0 {
-	// 	disp.CleanOutDir(sharedConfig.Outdir)
-	// }
-
-	// for _, p := range programArray {
-	// 	pcb := proc.MakePCB(p)
-	// 	c.ContextSwitch(pcb)
-	// 	for !c.ShouldHalt {
-	// 		c.Next()
-	// 	}
-	// 	if len(sharedConfig.Outdir) > 0 {
-	// 		disp.ProgramOutputFile(sharedConfig.Outdir, cpuType.CPU{ID: 1, State: cpuType.State(c)})
-	// 	}
-	// }
-
-	// load the ASM output file (if applicable)
-	// if len(sharedConfig.Outdir) > 0 {
-	// 	disp.MakeAll(sharedConfig.Outdir, programArray, []cpuType.CPU{
-	// 		cpuType.CPU{ID: 1, State: cpuType.State(c)},
-	// 	})
-	// }
+	fmt.Print("\nDisk Dump:\n")
+	_ = virtualMachine.Disk.Print()
+	fmt.Print("\n")
 }

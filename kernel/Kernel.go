@@ -22,21 +22,19 @@ type Kernel struct {
 
 // New makes a kernel with the given virtual machine.
 func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
-  k := &Kernel{
-    config: c,
-    virtualMachine: virtualMachine,
-    pm: pageManager.Make(virtualMachine),
-  }
-  schedMethod := scheduler.MethodForSwitch(c.Sched)
-  k.sched = scheduler.New(schedMethod, &k.pm)
-
   // load the programs from file (via loader)
   programs, err := loader.Load(c.Progfile)
   if err != nil {
     return nil, err
   }
   log.Printf("Got %d programs!\n", len(programs))
-  k.sched.Import(programs)
+
+  k := &Kernel{
+    config: c,
+    virtualMachine: virtualMachine,
+    pm: pageManager.Make(virtualMachine),
+  }
+  k.sched = scheduler.New(c.Sched, &k.pm, programs)
 
   return k, nil
 }

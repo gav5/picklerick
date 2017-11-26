@@ -1,5 +1,5 @@
 {
   "progfile": "Program-File.txt",
   "outdir": "out",
-  "sched": "priority"
+  "sched": "fcfs"
 }
