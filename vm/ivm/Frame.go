@@ -55,15 +55,11 @@ func (frame Frame) Fprint(w io.Writer) error {
 	for faddr, val := range frame {
 		switch faddr % FrameDisplayColumns {
 		case 0:
-			if _, err = fmt.Fprintf(w, "%v: %v", faddr, val); err != nil {
-				return err
-			}
-		case (FrameDisplayColumns - 1):
-			if _, err = fmt.Fprintf(w, " | %08v\n", val); err != nil {
+			if _, err = fmt.Fprintf(w, "%v", val); err != nil {
 				return err
 			}
 		default:
-			if _, err = fmt.Fprintf(w, " | %08v", val); err != nil {
+			if _, err = fmt.Fprintf(w, " | %v", val); err != nil {
 				return err
 			}
 		}

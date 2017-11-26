@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"../ivm"
-	
+
 )
 
 // LW loads the content of an address into a register
@@ -14,7 +14,8 @@ type LW struct {
 
 // Execute runs the given LW instruction
 func (i LW) Execute(ip ivm.InstructionProxy) {
-	// TODO: make this actually do what it's supposed to do
+	contents := ip.AddressFetchWord(i.args.Address)
+	ip.SetRegisterWord(i.args.Destination, contents)
 }
 
 // Assembly returns the representation in assembly language

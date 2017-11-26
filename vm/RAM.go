@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	// "strings"
 
 	"./ivm"
 )
@@ -80,19 +80,15 @@ func (r RAM) Print() error {
 
 // Fprint prints the contents of RAM to the given writer
 func (r RAM) Fprint(w io.Writer) error {
-	border := strings.Repeat("-", 11*ivm.FrameDisplayColumns+3)
-	var err error
-	fmt.Fprint(w, "\n")
 	for fnum, frame := range r {
-		if fnum > 0 {
-			if _, err = fmt.Fprintln(w, border); err != nil {
-				return err
-			}
-		}
-		if _, err = fmt.Fprintf(w, "Frame %02X\n", fnum); err != nil {
-			return err
-		}
+		fmt.Fprintf(w, "[%02X: ", fnum)
 		frame.Fprint(w)
+		fmt.Fprint(w, "]")
+		if fnum % 2 == 1 {
+			fmt.Fprint(w, "\n")
+		} else {
+			fmt.Fprint(w, "  ")
+		}
 	}
 	return nil
 }

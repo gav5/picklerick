@@ -1,5 +1,9 @@
 package prog
 
+import (
+	"../vm/ivm"
+)
+
 // Program represents the parsed results of a program file
 type Program struct {
 	Job  Job
@@ -22,4 +26,9 @@ func (p Program) GetWords() []uint32 {
 
 func (p Program) binWordSize() uint8 {
 	return p.Job.binWordSize() + p.Data.binWordSize()
+}
+
+// NumPages returns the number of pages/frames required to store.
+func (p Program) NumPages() uint8 {
+	return p.binWordSize() / ivm.FrameSize
 }

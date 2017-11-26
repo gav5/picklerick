@@ -1,10 +1,10 @@
-package processManager
+package scheduler
 
 import "../process"
 
 type processList struct {
   base []process.Process
-  sortMethod SortMethod
+  sortMethod Method
 }
 
 func (pl processList) Len() int {

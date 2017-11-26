@@ -20,23 +20,23 @@ var translateAddressTests = []struct {
   },
   {
     pt: Table{1: 0},
-    in: 0x4,
-    out: 0x0,
+    in: 0x00000004,
+    out: 0x00000000,
   },
   {
     pt: Table{1: 0},
-    in: 0x5,
-    out: 0x1,
+    in: 0x00000005,
+    out: 0x00000001,
   },
   {
     pt: Table{1: 0},
-    in: 0x6,
-    out: 0x2,
+    in: 0x00000006,
+    out: 0x00000002,
   },
   {
     pt: Table{1: 0},
-    in: 0x7,
-    out: 0x3,
+    in: 0x00000007,
+    out: 0x000000003,
   },
 }
 

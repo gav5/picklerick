@@ -1,4 +1,5 @@
 {
   "progfile": "Program-File.txt",
-  "outdir": "out"
+  "outdir": "out",
+  "sched": "priority"
 }

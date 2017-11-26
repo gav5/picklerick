@@ -6,8 +6,11 @@ import (
 	"./core"
 	"../kernel"
 	"../config"
+	"../kernel/process"
 	"log"
 	"sync"
+	"io"
+	"fmt"
 )
 
 // VM is the virtual computer system.
@@ -22,7 +25,7 @@ type VM struct {
 }
 
 // NOTE: this is how far it goes before it crashes!
-const maxCount = 1000000
+const maxCount = 100
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
@@ -37,7 +40,7 @@ func New(c config.Config) (*VM, error) {
 	}
 	// build each CPU Core
 	for coreNum := uint8(0); coreNum < ivm.NumCores; coreNum++ {
-		vm.Cores[coreNum] = core.New(coreNum, vm)
+		vm.Cores[coreNum] = core.New(coreNum+1)
 	}
 	// setup and configure the kernel
 	var err error
@@ -49,137 +52,184 @@ func New(c config.Config) (*VM, error) {
 }
 
 // Run runs the virtual machine.
-func (vm *VM) Run() {
+func (vm *VM) Run() error {
 	for vm.Clock = 0x00000000; vm.Clock < maxCount; vm.Clock++ {
-		log.Printf("[VM:%d] Tick!\n", vm.Clock)
-		var wg sync.WaitGroup
-		for _, c := range vm.Cores {
-			wg.Add(1)
-			if !vm.osKernel.IsDone() {
-				p := vm.osKernel.PopProcess()
-				// log.Printf(
-				// 	"[VM:%d] Sending process #%d to core #%d...\n",
-				// 	vm.Clock, p.ProcessNumber, coreNum,
-				// )
-				c.Apply(&p)
-			} else {
-				// log.Printf(
-				// 	"[VM:%d] No Process Provided For Core #%d!\n",
-				// 	vm.Clock, coreNum,
-				// )
-				c.Apply(nil)
-			}
-			go func(c *core.Core, clock Clock) {
-				defer wg.Done()
-				// log.Printf("[VM:%d] Running core #%d...\n", clock, coreNum)
-				res := c.Call()
-
-				if res.Error != nil {
-					// log.Printf(
-					// 	"[VM:%d] Error Running core #%d: %v\n",
-					// 	clock, res.CoreNum, res.Error,
-					// )
-					return
-				}
-				if res.Halted {
-					// log.Printf("[VM:%d] Core #%d has been HALTED\n", clock, res.CoreNum)
-					return
-				}
-			}(c, vm.Clock)
+		// run a virtual machine cycle (and check for errors)
+		if err := vm.runCycle(); err != nil {
+			return err
 		}
-		wg.Wait()
-
-		for _, c := range vm.Cores {
-			c.Save()
-		}
-		// vm.osKernel.Tock()
-
-		// check if it's time to be done yet
-		activeCores := ivm.NumCores
-		for _, c := range vm.Cores {
-			if c.ShouldHalt {
-				activeCores--
-			}
-		}
-		log.Printf(
-			"[VM:%d] %d/%d active cores\n",
-			vm.Clock, activeCores, ivm.NumCores,
-		)
+		// handle if there's nothing left to do (according to the Kernel)
+		// (obviously when this is the case we should break out of the loop)
 		if vm.osKernel.IsDone() {
-			break
-		} else {
-			log.Printf(
-				"[VM:%d] %d processes left\n",
-				vm.Clock, vm.osKernel.NumProcessesLeft(),
-			)
+			log.Printf("%s Kernel is DONE: breaking!\n", vm.callsign())
+			return nil
 		}
+	}
+	log.Printf("[VM:XXX] reached end of cycle limit: %d\n", maxCount)
+	return nil
+}
+
+func (vm *VM) runCycle() error {
+
+	// ensure the calls for Tick and Tock to the Kernel
+	vm.tick()
+	defer vm.tock()
+
+	// setup and call each core in sequence
+	// (wait for each to complete after that)
+	var wg sync.WaitGroup
+	for _, c := range vm.Cores {
+		wg.Add(1)
+		vm.setupCore(c)
+		go func(){
+			defer wg.Done()
+			c.Call()
+		}()
+	}
+
+	// after all cores are done, handle what they did
+	wg.Wait()
+	for _, c := range vm.Cores {
+		err := vm.handleCore(c)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (vm VM) tick() {
+	log.Printf("%s Tick!\n", vm.callsign())
+	vm.osKernel.Tick()
+}
+
+func (vm VM) tock() {
+	log.Printf("%s Tock!\n", vm.callsign())
+	vm.osKernel.Tock()
+}
+
+// setupCore sets up the core to run some process.
+// If necessary, it will get a new process from the Kernel.
+func (vm VM) setupCore(c *core.Core) {
+	log.Printf(
+		"%s Setting up Core #%d\n",
+		vm.callsign(), c.CoreNum,
+	)
+	if c.Process == nil {
+		// we need to give this core a process!
+		// the Kernel will know which one to do next!
+		c.Process = vm.osKernel.ProcessForCore(c.CoreNum)
+		if c.Process == nil {
+			// obviously the kernel wants this core to sleep
+			return
+		}
+		c.Next = c.Process.State.Next()
 	}
 }
 
-// InstructionProxy makes an instruction proxy for the given core
-func (vm VM) InstructionProxy(c ivm.ICore) ivm.InstructionProxy {
-	return ivm.MakeInstructionProxy(c, &vm.RAM, c.PagingProxy())
+// handleCore manages the final state from the execution of a core instruction.
+// This unpacks that information and passes it to the Kernel.
+func (vm VM) handleCore(c *core.Core) error {
+	callsign := vm.callsign()
+	log.Printf("%s Handling Core #%d\n", callsign, c.CoreNum)
+
+	if c.Process == nil {
+		// there was no process, so an early exit is in order
+		// (this is becasue the core was sleeping this cycle)
+		return nil
+	}
+
+	if c.Next.Error != nil {
+		// an error occured with the instruction execution
+		// stop what you are doing and worry about that
+		return c.Next.Error
+	}
+
+	if c.Next.Halt {
+		// the core said to halt, so the process is now done!
+		vm.osKernel.CompleteProcess(c.Process)
+		// since this is done, the process should be cleared
+		// (this sends the message to later fill it if possible)
+		c.Process = nil
+	} else if len(c.Next.Faults) > 0 {
+		// looks like there were faults
+		// (something was accessed that wasn't there)
+		c.Process.Status = process.Wait
+		vm.osKernel.UpdateProcess(c.Process)
+		c.Process = nil
+	}
+
+	return nil
+}
+
+func (vm VM) callsign() string {
+	return fmt.Sprintf("[VM:%d]", vm.Clock)
+}
+
+// FprintProcessTable prints the process table to the given writer.
+func (vm VM) FprintProcessTable(w io.Writer) error {
+	return vm.osKernel.FprintProcessTable(w)
 }
 
 // ProgramCounter returns the value of the program counter (PC).
-func (vm VM) ProgramCounter(corenum uint8) ivm.Address {
-	return vm.Cores[corenum].ProgramCounter()
-}
+// func (vm VM) ProgramCounter(corenum uint8) ivm.Address {
+// 	return vm.Cores[corenum].Process.State.ProgramCounter
+// }
 
 // SetProgramCounter sets the value of the program counter to the given value.
-func (vm *VM) SetProgramCounter(corenum uint8, addr ivm.Address) {
-	vm.Cores[corenum].SetProgramCounter(addr)
-}
+// func (vm *VM) SetProgramCounter(corenum uint8, addr ivm.Address) {
+// 	vm.Cores[corenum].Process.State.ProgramCounter = addr
+// }
 
 // Halt halts current program execution.
-func (vm *VM) Halt(corenum uint8) {
-	vm.Cores[corenum].Halt()
-}
+// func (vm *VM) Halt(corenum uint8) {
+// 	vm.Cores[corenum].Halt()
+// }
 
 // ResetCore resets the state to start over (undoing a halt)
-func (vm *VM) ResetCore(corenum uint8) {
-	vm.Cores[corenum].Reset()
-}
+// func (vm *VM) ResetCore(corenum uint8) {
+// 	vm.Cores[corenum].Reset()
+// }
 
 // RegisterWord returns the given register word value.
-func (vm VM) RegisterWord(corenum uint8, regNum ivm.RegisterDesignation) ivm.Word {
-	return vm.Cores[corenum].RegisterWord(regNum)
-}
+// func (vm VM) RegisterWord(corenum uint8, regNum ivm.RegisterDesignation) ivm.Word {
+// 	return vm.Cores[corenum].RegisterWord(regNum)
+// }
 
 // SetRegisterWord sets the given register to the given word value.
-func (vm *VM) SetRegisterWord(corenum uint8, regNum ivm.RegisterDesignation, val ivm.Word) {
-	vm.Cores[corenum].SetRegisterWord(regNum, val)
-}
+// func (vm *VM) SetRegisterWord(corenum uint8, regNum ivm.RegisterDesignation, val ivm.Word) {
+// 	vm.Cores[corenum].SetRegisterWord(regNum, val)
+// }
 
 // RegisterUint32 returns the given register uint32 value.
-func (vm VM) RegisterUint32(corenum uint8, regNum ivm.RegisterDesignation) uint32 {
-	return vm.Cores[corenum].RegisterUint32(regNum)
-}
+// func (vm VM) RegisterUint32(corenum uint8, regNum ivm.RegisterDesignation) uint32 {
+// 	return vm.Cores[corenum].RegisterUint32(regNum)
+// }
 
 // SetRegisterUint32 sets the given register to the given uint32 value.
-func (vm *VM) SetRegisterUint32(corenum uint8, regNum ivm.RegisterDesignation, val uint32) {
-	vm.Cores[corenum].SetRegisterUint32(regNum, val)
-}
+// func (vm *VM) SetRegisterUint32(corenum uint8, regNum ivm.RegisterDesignation, val uint32) {
+// 	vm.Cores[corenum].SetRegisterUint32(regNum, val)
+// }
 
 // RegisterInt32 returns the given register int32 value.
-func (vm VM) RegisterInt32(corenum uint8, regNum ivm.RegisterDesignation) int32 {
-	return vm.Cores[corenum].RegisterInt32(regNum)
-}
+// func (vm VM) RegisterInt32(corenum uint8, regNum ivm.RegisterDesignation) int32 {
+// 	return vm.Cores[corenum].RegisterInt32(regNum)
+// }
 
 // SetRegisterInt32 sets the given register to the given int32 value.
-func (vm *VM) SetRegisterInt32(corenum uint8, regNum ivm.RegisterDesignation, val int32) {
-	vm.Cores[corenum].SetRegisterInt32(regNum, val)
-}
+// func (vm *VM) SetRegisterInt32(corenum uint8, regNum ivm.RegisterDesignation, val int32) {
+// 	vm.Cores[corenum].SetRegisterInt32(regNum, val)
+// }
 
 // RegisterBool returns the given register bool value.
-func (vm VM) RegisterBool(corenum uint8, regNum ivm.RegisterDesignation) bool {
-	return vm.Cores[corenum].RegisterBool(regNum)
-}
+// func (vm VM) RegisterBool(corenum uint8, regNum ivm.RegisterDesignation) bool {
+// 	return vm.Cores[corenum].RegisterBool(regNum)
+// }
 
 // SetRegisterBool sets the given register to the given bool value.
-func (vm *VM) SetRegisterBool(corenum uint8, regNum ivm.RegisterDesignation, val bool) {
-	vm.Cores[corenum].SetRegisterBool(regNum, val)
-}
+// func (vm *VM) SetRegisterBool(corenum uint8, regNum ivm.RegisterDesignation, val bool) {
+// 	vm.Cores[corenum].SetRegisterBool(regNum, val)
+// }
 
 // RAMAddressFetchWord returns the word value at the given address.
 func (vm VM) RAMAddressFetchWord(addr ivm.Address) ivm.Word {

@@ -33,6 +33,11 @@ func (pt Table) UsedFrameNumbers() []ivm.FrameNumber {
 	return frameNumbers
 }
 
+// FrameNumberForPageNumber returns the frame number for the given page number.
+func (pt Table) FrameNumberForPageNumber(pn Number) ivm.FrameNumber {
+	return pt[pn]
+}
+
 func (ft frameTableType) UsedFrameNumbers() []ivm.FrameNumber {
 	frameNumbers := []ivm.FrameNumber{}
 	for frameNumber := range ft {

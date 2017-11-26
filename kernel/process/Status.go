@@ -4,12 +4,31 @@ package process
 type Status uint8
 
 const (
-  // Waiting means the process is waiting in the queue.
-  Waiting Status = iota
-  // Running means the process is running on a CPU Core.
-  Running
-  // Done means the process is done being run and should be killed.
-  Done
-  // Dead means the process has completed and is off the system.
-  Dead
+  // New means the process has just been created.
+  New Status = iota
+  // Ready means the process is in the queue and ready to be run.
+  Ready
+  // Run means the process is currently being run.
+  Run
+  // Wait means the process is waiting on memory to be filled.
+  Wait
+  // Terminated means the process has completed its course.
+  Terminated
 )
+
+func (status Status) String() string {
+  switch status {
+  case New:
+    return "New"
+  case Ready:
+    return "Ready"
+  case Run:
+    return "Run"
+  case Wait:
+    return "Wait"
+  case Terminated:
+    return "Terminated"
+  default:
+    return "???"
+  }
+}

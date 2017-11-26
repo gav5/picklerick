@@ -2,7 +2,7 @@ package process
 
 import (
 	"../page"
-	"../../prog"
+	"../program"
 	"../../metric"
 	"../../vm/ivm"
 )
@@ -18,7 +18,7 @@ type Process struct {
 	ProgramCounter ivm.Address
 
 	// State contains the operational state of the CPU
-	// State cpu.State
+	State ivm.State
 
 	// CodeSize indicates the size of the code for the given process
 	CodeSize uint8
@@ -30,8 +30,11 @@ type Process struct {
 	// ProcessNumber is the number assigned to the process for tracking in the process table
 	ProcessNumber uint8
 
-	// PageTable is used to track all pages used by the process
-	PageTable page.Table
+	// RAMPageTable is used to track all RAM pages used by the process
+	RAMPageTable page.Table
+
+	// DiskPageTable is used to track all Disk pages used by the process
+	DiskPageTable page.Table
 
 	// Priority is used for sorting purposes
 	Priority uint8
@@ -44,35 +47,29 @@ type Process struct {
 		CacheUse          metric.FractionalMetricUint32
 	}
 
-	// Program describes the program the PCB is running
-	// NOTE: this is a temporary measure to make this work!
-	// Program prog.Program
+	Program program.Program
 
-	// schedule: any
-	// accounts: any
+	// Footprint stores the number of frames/pages required to store this process
+	Footprint int
 
-	// Memories Memories
-
-	// progeny: any
-	// ptr: any
-	// resources: any
-
-	// Status describes the current status of the process
+	// State describes the current status of the process
 	// (ex: if it is running, waiting, etc)
 	Status Status
-
-	// statusInfo: any
-	// priority: any
 }
 
-// New makes a Process from a given program and page table
-func New(program prog.Program, pageTable page.Table) *Process {
-	return &Process{
+// Make makes a Process from a given program and page table
+func Make(p program.Program) Process {
+	return Process{
 		CPUID:          0x0,
 		ProgramCounter: 0x00,
-		CodeSize:       program.Job.NumberOfWords,
-		ProcessNumber:  program.Job.ID,
-		Priority: 			program.Job.PriorityNumber,
-		PageTable:      pageTable,
+		CodeSize:       p.NumberOfWords,
+		ProcessNumber:  p.JobID,
+		Priority: 			p.PriorityNumber,
+		RAMPageTable:  	make(page.Table),
+		DiskPageTable:	make(page.Table),
+		Footprint:			4,
+		Program: 				p,
+		State:					ivm.MakeState(),
+		Status:					New,
 	}
 }

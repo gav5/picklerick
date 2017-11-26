@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"../ivm"
-	
+
 )
 
 // ST stores the content of a register into an address
@@ -14,7 +14,8 @@ type ST struct {
 
 // Execute runs the given ST instruction
 func (i ST) Execute(ip ivm.InstructionProxy) {
-	// TODO: make this actually do what it's supposed to do
+	contents := ip.RegisterWord(i.args.Base)
+	ip.AddressWriteWord(i.args.Address, contents)
 }
 
 // Assembly returns the representation in assembly language

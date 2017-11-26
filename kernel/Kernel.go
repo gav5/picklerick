@@ -2,23 +2,22 @@ package kernel
 
 import (
   "../vm/ivm"
-  "../prog"
   "../config"
-  "./resourceManager"
-  "./processManager"
-  "./process"
-  "./page"
+  "./pageManager"
   "./scheduler"
+  "./process"
+  // "./page"
+  "./loader"
   "log"
+  "io"
 )
 
 // Kernel houses all the storage and functionality of the OS kernel.
 type Kernel struct {
   config config.Config
   virtualMachine ivm.IVM
-  ramRM *resourceManager.ResourceManager
-  diskRM *resourceManager.ResourceManager
-  pm *processManager.ProcessManager
+  pm pageManager.PageManager
+  sched *scheduler.Scheduler
 }
 
 // New makes a kernel with the given virtual machine.
@@ -26,106 +25,99 @@ func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
   k := &Kernel{
     config: c,
     virtualMachine: virtualMachine,
-    ramRM: resourceManager.New(ivm.RAMNumFrames),
-    diskRM: resourceManager.New(ivm.DiskNumFrames),
-    pm: processManager.New(scheduler.FIFO),
+    pm: pageManager.Make(virtualMachine),
   }
-  // load programs into the system
-  var programArray []prog.Program
-  var err error
-	if programArray, err = prog.ParseFile(c.Progfile); err != nil {
-		log.Fatalf("error parsing program file: %v\n", err)
-		return k, err
-	}
-  log.Printf("Got %d programs!\n", len(programArray))
-  if err = k.LoadPrograms(programArray); err != nil {
-    return k, err
+  schedMethod := scheduler.MethodForSwitch(c.Sched)
+  k.sched = scheduler.New(schedMethod, &k.pm)
+
+  // load the programs from file (via loader)
+  programs, err := loader.Load(c.Progfile)
+  if err != nil {
+    return nil, err
   }
+  log.Printf("Got %d programs!\n", len(programs))
+  k.sched.Import(programs)
+
   return k, nil
 }
 
+// Tick is used to signal the start of a virtual machine cycle to the kernel.
+// This sets up processes and resources before the next cycle begins.
+func (k Kernel) Tick() {
+  // defer to the scheduler
+  k.sched.Tick()
+}
+
+// Tock is used to signal the end of a virtual machine cycle to the kernel.
+// This reacts to the events that occured during the cycle.
+func (k Kernel) Tock() {
+  // TODO: make Tock()
+}
+
 // ProcessForCore returns the appropriate process for the given core.
-// func (k Kernel) ProcessForCore(coreNum int) *process.Process {
-//   return k.pm.ProcessForCore(coreNum)
-// }
+func (k Kernel) ProcessForCore(corenum uint8) *process.Process {
+  // defer to the scheduler
+  return k.sched.ProcessForCore(corenum)
+}
 
-// Tock should be called after every cycle completes
-// func (k Kernel) Tock() {
-//   k.pm.Reevaluate()
-// }
+// UpdateProcess updates an existing process in the list.
+func (k Kernel) UpdateProcess(p *process.Process) error {
+  // defer to the scheduler
+  return k.sched.Update(p)
+}
 
-// PopProcess removes the frontmost process off the queue and returns it.
-func (k Kernel) PopProcess() process.Process {
-  return k.pm.Pop()
+// LoadProcess makes sure the given process is in RAM.
+func (k Kernel) LoadProcess(p *process.Process) error {
+  // defer to the scheduler
+  return k.sched.Load(p)
+}
+
+// CompleteProcess marks a process as completed and removes its used resources.
+// (this gives the system the opportunity to fill those resources for others)
+func (k Kernel) CompleteProcess(p *process.Process) {
+  // defer to the scheduler
+  k.sched.Complete(p)
 }
 
 // IsDone returns if the system is done yet.
 func (k Kernel) IsDone() bool {
-  return k.pm.IsDone()
+  return k.sched.IsDone()
 }
 
 // NumProcessesLeft returns the number of processes still left in the queue.
 func (k Kernel) NumProcessesLeft() int {
-  return k.pm.NumLeft()
+  return k.sched.NumLeft()
+}
+
+// FprintProcessTable prints the process table to the given writer.
+func (k Kernel) FprintProcessTable(w io.Writer) error {
+  return k.sched.FprintProcessTable(w)
 }
 
 // PageReadRAM reads a page from the RAM at the given page number and page table.
-func (k Kernel) PageReadRAM(pageNumber page.Number, pageTable page.Table) page.Page {
-	frameNumber := pageTable[pageNumber]
-	frame := k.virtualMachine.RAMFrameFetch(frameNumber)
-	return page.Page(frame)
-}
-
-// PageWriteRAM writes the given page to the RAM at the given page number.
-func (k Kernel) PageWriteRAM(p page.Page, pageNumber page.Number, pageTable page.Table) {
-	frameNumber := pageTable[pageNumber]
-	frame := ivm.Frame(p)
-	k.virtualMachine.RAMFrameWrite(frameNumber, frame)
-}
-
-// PageReadDisk reads a page from the Disk at the given page number and page table.
-func (k Kernel) PageReadDisk(pageNumber page.Number, pageTable page.Table) page.Page {
-  frameNumber := pageTable[pageNumber]
-  frame := k.virtualMachine.DiskFrameFetch(frameNumber)
-  return page.Page(frame)
-}
-
-// PageWriteDisk writes the given page to the Disk at the given page numbber.
-func (k Kernel) PageWriteDisk(p page.Page, pageNumber page.Number, pageTable page.Table) {
-  frameNumber := pageTable[pageNumber]
-  frame := ivm.Frame(p)
-  k.virtualMachine.DiskFrameWrite(frameNumber, frame)
-}
-
-// PushProgram pushes a program into the first available space in the VM.
-// (this prefers RAM, but falls back to using the disk if necessary; returns error otherwise)
-func (k *Kernel) PushProgram(p prog.Program, pageTable *page.Table) error {
-	// get the pages for the given program
-	// push those pages into the VM and return the result
-  pageArray := page.ArrayFromProgram(p)
-  numPages := len(pageArray)
-  if numPages <= k.ramRM.QuantityAvailable() {
-    // there is adequate space in RAM to fit this!!
-    // let's claim some space in RAM and put it in there!
-    frameNumbers, err := k.ramRM.Claim(numPages)
-    if err != nil {
-      return err
-    }
-    // add to the page table (so the process knows to use that space)
-    for pnum, fnum := range frameNumbers {
-      (*pageTable)[page.Number(pnum)] = ivm.FrameNumber(fnum)
-    }
-    // insert the given pages into RAM
-    for pageNumber, p := range pageArray {
-      k.PageWriteRAM(p, page.Number(pageNumber), *pageTable)
-    }
-  }
-  return nil
-}
-
-// PushOverflowError means there isn't enough storage to hold all provided data.
-type PushOverflowError struct{}
-
-func (e PushOverflowError) Error() string {
-	return "There isn't enough storage to hold all the provided data."
-}
+// func (k Kernel) PageReadRAM(pageNumber page.Number, pageTable page.Table) page.Page {
+// 	frameNumber := pageTable[pageNumber]
+// 	frame := k.virtualMachine.RAMFrameFetch(frameNumber)
+// 	return page.Page(frame)
+// }
+//
+// // PageWriteRAM writes the given page to the RAM at the given page number.
+// func (k Kernel) PageWriteRAM(p page.Page, pageNumber page.Number, pageTable page.Table) {
+// 	frameNumber := pageTable[pageNumber]
+// 	frame := ivm.Frame(p)
+// 	k.virtualMachine.RAMFrameWrite(frameNumber, frame)
+// }
+//
+// // PageReadDisk reads a page from the Disk at the given page number and page table.
+// func (k Kernel) PageReadDisk(pageNumber page.Number, pageTable page.Table) page.Page {
+//   frameNumber := pageTable[pageNumber]
+//   frame := k.virtualMachine.DiskFrameFetch(frameNumber)
+//   return page.Page(frame)
+// }
+//
+// // PageWriteDisk writes the given page to the Disk at the given page numbber.
+// func (k Kernel) PageWriteDisk(p page.Page, pageNumber page.Number, pageTable page.Table) {
+//   frameNumber := pageTable[pageNumber]
+//   frame := ivm.Frame(p)
+//   k.virtualMachine.DiskFrameWrite(frameNumber, frame)
+// }

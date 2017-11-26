@@ -9,18 +9,18 @@ const NumCores = 4
 type IVM interface {
 
 	// Core Interfacing (must specify coreNum as well)
-	ProgramCounter(uint8) Address
-	SetProgramCounter(uint8, Address)
-	Halt(uint8)
-	ResetCore(uint8)
-	RegisterWord(uint8, RegisterDesignation) Word
-	SetRegisterWord(uint8, RegisterDesignation, Word)
-	RegisterUint32(uint8, RegisterDesignation) uint32
-	SetRegisterUint32(uint8, RegisterDesignation, uint32)
-	RegisterInt32(uint8, RegisterDesignation) int32
-	SetRegisterInt32(uint8, RegisterDesignation, int32)
-	RegisterBool(uint8, RegisterDesignation) bool
-	SetRegisterBool(uint8, RegisterDesignation, bool)
+	// ProgramCounter(uint8) Address
+	// SetProgramCounter(uint8, Address)
+	// Halt(uint8)
+	// ResetCore(uint8)
+	// RegisterWord(uint8, RegisterDesignation) Word
+	// SetRegisterWord(uint8, RegisterDesignation, Word)
+	// RegisterUint32(uint8, RegisterDesignation) uint32
+	// SetRegisterUint32(uint8, RegisterDesignation, uint32)
+	// RegisterInt32(uint8, RegisterDesignation) int32
+	// SetRegisterInt32(uint8, RegisterDesignation, int32)
+	// RegisterBool(uint8, RegisterDesignation) bool
+	// SetRegisterBool(uint8, RegisterDesignation, bool)
 
 	// Working with RAM
 	RAMAddressFetchWord(Address) Word
@@ -37,7 +37,4 @@ type IVM interface {
 	// Working with Disk
 	DiskFrameFetch(FrameNumber) Frame
 	DiskFrameWrite(FrameNumber, Frame)
-
-	// Making an InstructionProxy
-	InstructionProxy(ICore) InstructionProxy
 }

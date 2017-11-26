@@ -5,7 +5,8 @@ import (
 
 	"./config"
 	"./vm"
-	// "fmt"
+	"os"
+	"fmt"
 	// "./disp"
 )
 
@@ -32,8 +33,11 @@ func main() {
 		return
 	}
 
+	fmt.Println()
+	_ = virtualMachine.FprintProcessTable(os.Stdout)
+
 	virtualMachine.Run()
-	log.Printf("done!\n")
+	// log.Printf("done!\n")
 
 	// fmt.Print("RAM Dump:\n")
 	// _ = virtualMachine.RAM.Print()
