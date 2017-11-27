@@ -15,6 +15,10 @@ type DIVI struct {
 func (i DIVI) Execute(ip ivm.InstructionProxy) {
 	base := ip.RegisterInt32(i.args.Base)
 	dest := ip.RegisterInt32(i.args.Destination)
+	if dest == 0 {
+		ip.Error(DIVIbyZero{})
+		return
+	}
 	ip.SetRegisterInt32(i.args.Destination, base/dest)
 }
 
@@ -26,4 +30,10 @@ func (i DIVI) Assembly() string {
 // MakeDIVI makes a DIVI instruction for the given args
 func MakeDIVI(args ivm.InstructionArgs) ivm.Instruction {
 	return DIVI{args: args.BranchFormat()}
+}
+
+// DIVIbyZero describes a situation where DIV is asked to divide by zero.
+type DIVIbyZero struct {}
+func (err DIVIbyZero) Error() string {
+	return "cannot DIVI by zero"
 }
