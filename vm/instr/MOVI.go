@@ -14,9 +14,8 @@ type MOVI struct {
 
 // Execute runs the given MOVI instruction
 func (i MOVI) Execute(ip ivm.InstructionProxy) {
-	address := i.args.Address	// get source address
-	source := ip.AddressFetchWord(address) // fetch source
-	ip.SetRegisterWord(i.args.Destination, source)
+	immediateData := ivm.Word(i.args.Address)
+	ip.SetRegisterWord(i.args.Destination, immediateData)
 }
 
 // Assembly returns the representation in assembly language
