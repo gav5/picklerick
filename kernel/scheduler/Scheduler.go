@@ -5,18 +5,19 @@ import (
   "sort"
   "io"
   "fmt"
-  // "log"
+  "log"
 
   "../../config"
   "../process"
   "../program"
   "../pageManager"
+  "../../vm/ivm"
 )
 
 // Scheduler keeps track of system processes.
 type Scheduler struct {
   processList *processList
-  completed []process.Process
+  completed *processList
   pm *pageManager.PageManager
   methodName string
   longTermQueueSize uint
@@ -29,7 +30,10 @@ func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Sche
       base: process.MakeArray(a),
       sortMethod: MethodForSwitch(c.Sched),
     },
-    completed: []process.Process{},
+    completed: &processList{
+      base: []process.Process{},
+      sortMethod: FCFS,
+    },
     pm: p,
     methodName: c.Sched,
     longTermQueueSize: c.QSize,
@@ -48,17 +52,24 @@ func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Sche
 // Tick is used to signal the start of a virtual machine cycle to the kernel.
 // This sets up processes and resources before the next cycle begins.
 func (sched Scheduler) Tick() {
-  // TODO: handle processes that shouldn't be on a CPU anymore
-  // TODO: handle processes that shouldn't be in RAM anymore
   // run the long-term scheduler
   sched.Long()
 }
 
 // Tock is used to signal the end of a virtual machine cycle to the kernel.
 // This reacts to the events that occured during the cycle.
-func (sched Scheduler) Tock() {
+func (sched Scheduler) Tock() error {
+
+  // make sure terminated processes aren't taking up space anymore
+  // (otherwise, there's nothing to fill here and it just stops)
+  err := sched.Clean()
+  if err != nil {
+    return err
+  }
+
   // check back through previous requests and try to fulfill them
   sched.pm.HandleWaitlist()
+
   // make sure any waiting processes have what they need
   sched.Each(func(p *process.Process) {
     if p.Status == process.Wait {
@@ -68,27 +79,29 @@ func (sched Scheduler) Tock() {
       }
     }
   })
+  return nil
 }
 
 // ProcessForCore returns the appropriate process for the given core.
-func (sched Scheduler) ProcessForCore(corenum uint8) *process.Process {
+func (sched Scheduler) ProcessForCore(corenum uint8) process.Process {
   // Look for the first process that is ready to be run
   p := sched.FindBy(func(p *process.Process) bool {
     return p.Status == process.Ready
   })
-  if p != nil {
-    // make sure the process is ready to be run on the given core
-    sched.Short(corenum, p)
+  if p == nil {
+    return process.Sleep()
   }
-  return p
+  // make sure the process is ready to be run on the given core
+  sched.Short(corenum, p)
+  return *p
 }
 
 // Update updates an existing process in the list.
-func (sched *Scheduler) Update(p *process.Process) error {
+func (sched *Scheduler) Update(p process.Process) error {
   for i := sched.processList.Len() - 1; i >= 0; i-- {
-    pX := &sched.processList.base[i]
-    if p == pX {
-      heap.Fix(sched.processList, i)
+    pX := sched.processList.base[i]
+    if p.ProcessNumber == pX.ProcessNumber {
+      sched.processList.base[i] = p
       return nil
     }
   }
@@ -102,25 +115,61 @@ func (sched *Scheduler) Load(p *process.Process) error {
     return NotReadyError{}
   }
   // defer to the page manager
-  sched.pm.Load(p)
-  return nil
+  return sched.pm.Load(p)
 }
 
-// Complete completes the given processs (marks it Terminated).
-func (sched *Scheduler) Complete(p *process.Process) error {
+// Save makes sure the given process's RAM is persisted to Disk.
+func (sched *Scheduler) Save(p *process.Process) error {
+  // defer to the page manager
+  return sched.pm.Save(p)
+}
+
+// Unload makes sure the given process is not in RAM.
+func (sched *Scheduler) Unload(p *process.Process) error {
+  log.Printf("[Unload] process %d should be unloaded\n", p.ProcessNumber)
+
+  // defer to the page manager
+  err := sched.pm.Unload(p)
+  if err != nil {
+    return err
+  }
+
+  // make sure the process is now removed (for efficiency)
+  // we will want to add to the completed list
+  return sched.removeProcess(p)
+}
+
+func (sched *Scheduler) removeProcess(p *process.Process) error {
   index, _ := sched.findPair(func(px *process.Process) bool {
-    return p == px
+    return p.ProcessNumber == px.ProcessNumber
   })
   if index == -1 {
     return NotFoundError{}
   }
+  log.Printf(
+    "[removeProcess] (before: %d) %d completed\n",
+    p.ProcessNumber, sched.completed.Len(),
+  )
+
   // remove from the process list
   sched.processList.base = append(
     sched.processList.base[:index],
     sched.processList.base[index+1:]...,
   )
   // add to the completed list
-  sched.completed = append(sched.completed, *p)
+  sched.completed.Push(*p)
+  sort.Sort(sched.completed)
+  log.Printf(
+    "[removeProcess] (after: %d) %d completed\n",
+    p.ProcessNumber, sched.completed.Len(),
+  )
+  return nil
+}
+
+// Complete completes the given processs (marks it Terminated).
+func (sched *Scheduler) Complete(p *process.Process) error {
+  // mark is Terminated (this will get cleaned up later)
+  p.Status = process.Terminated
   return nil
 }
 
@@ -180,10 +229,10 @@ func (sched Scheduler) findPair(fn func(*process.Process) bool) (int, *process.P
 
 // FprintProcessTable prints the process table to the given writer.
 func (sched Scheduler) FprintProcessTable(w io.Writer) error {
-  combined := append(sched.processList.base, sched.completed...)
+  combined := append(sched.processList.base, sched.completed.base...)
   header := fmt.Sprintf(
-    "Process Table (%d processes, sort method: %s, queue size: %d)\n",
-    len(combined), sched.methodName, sched.longTermQueueSize,
+    "Process Table (%d processes, sort method: %s, queue size: %d/%d)\n",
+    len(combined), sched.methodName, sched.longTermQueueSize, ivm.RAMNumFrames,
   )
   if _, err := w.Write([]byte(header)); err != nil {
     return err

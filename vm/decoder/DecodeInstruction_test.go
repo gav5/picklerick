@@ -34,6 +34,7 @@ var decodeInstructionTests = []struct {
 	{0x5681003C, "BNE R8 R1 0x003C", nil},
 	{0xC10000AC, "WR R0 0x000000AC", nil},
 	{0x92000000, "HLT", nil},
+	{0x13000000, "NOP", nil},
 	{0xFFFFFFFF, "<nil>", UnrecognizedOpcodeError{op: ivm.Opcode(63)}},
 }
 

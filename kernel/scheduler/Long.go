@@ -21,10 +21,9 @@ func (sched Scheduler) Long() {
     if avail < leftoverSpace {
       // the threshhold has been met (need to use the RAM for other stuff)
       // we should break out now and leave things as they are
-      log.Printf("[Long] Stopping at RAM %d/%d\n", avail, ivm.RAMNumFrames)
+      // log.Printf("[Long] Stopping at RAM %d/%d\n", avail, ivm.RAMNumFrames)
       return false
     }
-    log.Printf("[Long] RAM is at %d/%d\n", avail, ivm.RAMNumFrames)
     // fill the RAM with another process's initial footprint
     if err := sched.pm.Load(p); err != nil {
       msg := fmt.Sprintf("failed to load process %v", *p)
@@ -37,6 +36,10 @@ func (sched Scheduler) Long() {
       panic(msg)
       return false
     }
+    log.Printf(
+      "[Long] process %d is loaded (RAM is now %d/%d)\n",
+      p.ProcessNumber, sched.pm.AvailableRAM(), ivm.RAMNumFrames,
+    )
     return true
   })
 }

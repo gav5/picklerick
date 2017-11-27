@@ -48,19 +48,19 @@ func (k Kernel) Tick() {
 
 // Tock is used to signal the end of a virtual machine cycle to the kernel.
 // This reacts to the events that occured during the cycle.
-func (k Kernel) Tock() {
+func (k Kernel) Tock() error {
   // defer to the Scheduler
-  k.sched.Tock()
+  return k.sched.Tock()
 }
 
 // ProcessForCore returns the appropriate process for the given core.
-func (k Kernel) ProcessForCore(corenum uint8) *process.Process {
+func (k Kernel) ProcessForCore(corenum uint8) process.Process {
   // defer to the scheduler
   return k.sched.ProcessForCore(corenum)
 }
 
 // UpdateProcess updates an existing process in the list.
-func (k Kernel) UpdateProcess(p *process.Process) error {
+func (k Kernel) UpdateProcess(p process.Process) error {
   // defer to the scheduler
   return k.sched.Update(p)
 }

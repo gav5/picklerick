@@ -77,3 +77,18 @@ func Make(matchData []string) (Program, error) {
 
   return a, nil
 }
+
+// Sleep makes a sleep program.
+// This program has only one NOP instruction.
+func Sleep() Program {
+  return Program{
+    JobID: 0x00,
+    NumberOfWords: 1,
+    PriorityNumber: 0,
+    InputBufferSize: 0,
+    OutputBufferSize: 0,
+    TempBufferSize: 0,
+    DataBlock: []uint32{},
+    Instructions: []uint32{0x13000000},
+  }
+}

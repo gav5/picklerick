@@ -12,7 +12,7 @@ import (
 // Core describes a CPU Core in the virtual machine.
 type Core struct {
 	CoreNum	uint8
-	Process *process.Process
+	Process process.Process
 	Next ivm.State
 }
 
@@ -20,6 +20,7 @@ type Core struct {
 func Make(coreNum uint8) Core {
 	return Core{
 		CoreNum: coreNum,
+		Process: process.Sleep(), // <- obviously this is a bad assumption
 		Next: ivm.MakeState(),
 	}
 }
@@ -36,17 +37,17 @@ func MakeArray() [ivm.NumCores]Core {
 
 // Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() {
-	if c.Process == nil {
-		log.Printf("[CORE%d:XXX] NO PROCESS\n", c.CoreNum)
-		// probably just nearing the end, so do nothing!
-		return
-	}
+	// if c.Process.ProcessNumber == nil {
+	// 	log.Printf("[CORE%d:XXX] NO PROCESS\n", c.CoreNum)
+	// 	// probably just nearing the end, so do nothing!
+	// 	return
+	// }
 
 	callsign := fmt.Sprintf(
 		"[CORE%d:%04x]",
 		c.CoreNum, uint(c.Process.State.ProgramCounter),
 	)
-	log.Printf("%s Begin execution\n", callsign)
+	// log.Printf("%s Begin execution\n", callsign)
 
 	// get the current instruction
 	instruction, err := c.currentInstruction()
@@ -80,7 +81,7 @@ func (c *Core) Apply(p *process.Process) {
 	if p == nil {
 		log.Printf("[CPU%d] NO JOB\n", c.CoreNum)
 
-		c.Process = nil
+		c.Process = process.Sleep()
 		// c.ShouldHalt = true
 		return
 	}

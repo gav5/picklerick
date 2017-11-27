@@ -41,6 +41,19 @@ func (pt Table) PageNumbers() []Number {
 	return outary
 }
 
+// Pairs returns the page table as parallel arrays.
+func (pt Table) Pairs() ([]Number, []ivm.FrameNumber) {
+	ptLen := len(pt)
+	pgNumbers := make([]Number, ptLen)
+	frNumbers := make([]ivm.FrameNumber, ptLen)
+	for pn, fn := range pt {
+		pgNumbers[ptLen - 1] = pn
+		frNumbers[ptLen - 1] = fn
+		ptLen--
+	}
+	return pgNumbers, frNumbers
+}
+
 type numbersArray []Number
 
 func (na numbersArray) Len() int {

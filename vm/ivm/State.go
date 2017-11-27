@@ -8,6 +8,7 @@ type State struct {
   Caches FrameCache
   Faults FaultList
   Error error
+  isSleep bool
 }
 
 // MakeState builds a new blank state.
@@ -19,6 +20,7 @@ func MakeState() State {
     Caches: FrameCache{},
     Faults: map[FrameNumber]bool{},
     Error: nil,
+    isSleep: false,
   }
   // zero out each register
   for i := range s.Registers {
@@ -27,8 +29,28 @@ func MakeState() State {
   return s
 }
 
+// Sleep makes a state for the sleep process.
+func Sleep() State {
+  return State{
+    ProgramCounter: 0x00000000,
+    Registers: [NumCoreRegisters]Word{},
+    Halt: false,
+    Caches: FrameCache{
+      0x00: Frame{0x13000000},
+    },
+    Faults: map[FrameNumber]bool{},
+    Error: nil,
+    isSleep: true,
+  }
+}
+
 // Next builds an initial next state from an existing state.
 func (s State) Next() State {
+  if s.isSleep {
+    // sleep states produce the same value
+    // (because duh!)
+    return s
+  }
   next := State{
     ProgramCounter: s.ProgramCounter + 4,
     Registers: [NumCoreRegisters]Word{},

@@ -55,6 +55,8 @@ type Process struct {
 	// State describes the current status of the process
 	// (ex: if it is running, waiting, etc)
 	Status Status
+
+	isSleep bool
 }
 
 // Make makes a Process from a given program
@@ -71,6 +73,25 @@ func Make(p program.Program) Process {
 		Program: 				p,
 		State:					ivm.MakeState(),
 		Status:					New,
+		isSleep:				false,
+	}
+}
+
+// Sleep makes a process that tells the CPU to sleep each time.
+func Sleep() Process {
+	return Process{
+		CPUID: 0x0,
+		ProgramCounter: 0x00,
+		CodeSize: 1,
+		ProcessNumber: 0,
+		Priority: 0,
+		RAMPageTable: make(page.Table),
+		DiskPageTable: make(page.Table),
+		Footprint: 0,
+		Program: program.Sleep(),
+		State: ivm.Sleep(),
+		Status: Ready,
+		isSleep: true,
 	}
 }
 
@@ -81,4 +102,9 @@ func MakeArray(progAry []program.Program) []Process {
 		outary[i] = Make(prog)
 	}
 	return outary
+}
+
+// IsSleep returns if this is a sleep process or not
+func (p Process) IsSleep() bool {
+	return p.isSleep
 }

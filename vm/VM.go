@@ -104,37 +104,34 @@ func (vm VM) tick() {
 
 func (vm VM) tock() {
 	// log.Printf("%s Tock!\n", vm.callsign())
-	vm.osKernel.Tock()
+	err := vm.osKernel.Tock()
+	if err != nil {
+		log.Printf("%s Tock error: %v\n", vm.callsign(), err)
+		panic("Tock error: " + err.Error())
+	}
 }
 
 // setupCore sets up the core to run some process.
 // If necessary, it will get a new process from the Kernel.
 func (vm VM) setupCore(c *core.Core) {
-	if c.Process == nil {
+	if c.Process.IsSleep() {
 		// we need to give this core a process!
 		// the Kernel will know which one to do next!
 		c.Process = vm.osKernel.ProcessForCore(c.CoreNum)
-		if c.Process == nil {
-			// obviously the kernel wants this core to sleep
-			log.Printf(
-				"%s Setting up Core #%d to SLEEP\n",
-				vm.callsign(), c.CoreNum,
-			)
-			return
-		}
-		callsign := vm.callsign()
-		log.Printf(
-			"%s Setting up Core #%d with process #%d\n",
-			callsign, c.CoreNum, c.Process.ProcessNumber,
-		)
-		log.Printf(
-			"%s Core #%d has page table: %v\n",
-			callsign, c.CoreNum, c.Process.RAMPageTable,
-		)
-		log.Printf(
-			"%s Core #%d has caches: %v\n",
-			callsign, c.CoreNum, c.Process.State.Caches.Slice(),
-		)
+
+		// callsign := vm.callsign()
+		// log.Printf(
+		// 	"%s Setting up Core #%d with process #%d\n",
+		// 	callsign, c.CoreNum, c.Process.ProcessNumber,
+		// )
+		// log.Printf(
+		// 	"%s Core #%d has page table: %v\n",
+		// 	callsign, c.CoreNum, c.Process.RAMPageTable,
+		// )
+		// log.Printf(
+		// 	"%s Core #%d has caches: %v\n",
+		// 	callsign, c.CoreNum, c.Process.State.Caches.Slice(),
+		// )
 	}
 	c.Next = c.Process.State.Next()
 }
@@ -143,9 +140,9 @@ func (vm VM) setupCore(c *core.Core) {
 // This unpacks that information and passes it to the Kernel.
 func (vm VM) handleCore(c *core.Core) error {
 	callsign := vm.callsign()
-	log.Printf("%s Handling Core #%d\n", callsign, c.CoreNum)
+	// log.Printf("%s Handling Core #%d\n", callsign, c.CoreNum)
 
-	if c.Process == nil {
+	if c.Process.IsSleep() {
 		// there was no process, so an early exit is in order
 		// (this is becasue the core was sleeping this cycle)
 		return nil
@@ -160,10 +157,11 @@ func (vm VM) handleCore(c *core.Core) error {
 		// stop the process and declare it a failure
 		// (this should essentially be treated the same as a halt)
 		c.Process.State = c.Process.State.Apply(c.Next)
-		vm.osKernel.CompleteProcess(c.Process)
+		vm.osKernel.CompleteProcess(&c.Process)
+		vm.osKernel.UpdateProcess(c.Process)
 		// sine this is done, the process should be cleared
 		// (this sends the message to later fill it if possible)
-		c.Process = nil
+		c.Process = process.Sleep()
 
 		// nil is returned here because there's nothing wrong with the VM
 		// (it will just go to the next process like nothing ever happened)
@@ -177,10 +175,11 @@ func (vm VM) handleCore(c *core.Core) error {
 		)
 		// the core said to halt, so the process is now done!
 		c.Process.State = c.Process.State.Apply(c.Next)
-		vm.osKernel.CompleteProcess(c.Process)
+		vm.osKernel.CompleteProcess(&c.Process)
+		vm.osKernel.UpdateProcess(c.Process)
 		// since this is done, the process should be cleared
 		// (this sends the message to later fill it if possible)
-		c.Process = nil
+		c.Process = process.Sleep()
 	} else if len(c.Next.Faults) > 0 {
 		// looks like there were faults
 		// (something was accessed that wasn't there)
@@ -192,10 +191,10 @@ func (vm VM) handleCore(c *core.Core) error {
 		// ensure the faults persist (and nothing else)
 		c.Process.State.Faults = c.Next.Faults.Copy()
 		vm.osKernel.UpdateProcess(c.Process)
-		c.Process = nil
+		c.Process = process.Sleep()
 	} else {
 		// this was actually successful, so apply next so it's the actual state
-		log.Printf("%s applying next state\n", callsign)
+		// log.Printf("%s applying next state\n", callsign)
 		c.Process.State = c.Process.State.Apply(c.Next)
 	}
 

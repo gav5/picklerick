@@ -47,8 +47,8 @@ func main() {
 		fmt.Printf("\nError Report:\n%v\n", err)
 	}
 
-	// fmt.Println()
-	// _ = virtualMachine.FprintProcessTable(os.Stdout)
+	fmt.Println()
+	_ = virtualMachine.FprintProcessTable(os.Stdout)
 
 	// fmt.Print("\nRAM Dump:\n")
 	// virtualMachine.RAM.Print()

@@ -2,6 +2,6 @@
   "progfile": "Program-File.txt",
   "outdir": "out",
   "sched": "fcfs",
-  "qsize": 40,
-  "maxcycles": 10000
+  "qsize": 80,
+  "maxcycles": 100000
 }

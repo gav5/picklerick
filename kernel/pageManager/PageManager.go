@@ -2,6 +2,7 @@ package pageManager
 
 import (
   "log"
+  "fmt"
 
   "../../vm/ivm"
   "../page"
@@ -89,6 +90,80 @@ func (pm *PageManager) Load(p *process.Process) error {
   }
   // since the process is loaded into RAM, it's ready to run!
   p.Status = process.Ready
+  return nil
+}
+
+// Save makes sure the given process's RAM is persisted to Disk.
+func (pm *PageManager) Save(p *process.Process) error {
+  // go through each page in RAM and persist to the corresponding page on Disk
+  // if that page is not on Disk yet, we will have to make one first
+  for pn, rfn := range p.RAMPageTable {
+    if _, present := p.DiskPageTable[pn]; !present {
+      // there is no corresponding page yet, so make sure there is one
+      // these will be claimed one at a time (it can get back to it later)
+      newDfn, err := pm.diskRM.Claim(1)
+      if err != nil {
+        return err
+      }
+      // assign the new disk frame number to the disk page table
+      p.DiskPageTable[pn] = ivm.FrameNumber(newDfn[0])
+    }
+    // write the frame from RAM to the corresponding page on Disk
+    // (note it should be there now becasue of the above guard)
+    ramFrame := pm.virtualMachine.RAMFrameFetch(rfn)
+    dfn, pnOk := p.DiskPageTable[pn]
+    if !pnOk {
+      // just to be safe!
+      panic(fmt.Sprintf(
+        "tried to fetch a page number (%d) that wasn't there!", pn,
+      ))
+    }
+    pm.virtualMachine.DiskFrameWrite(dfn, ramFrame)
+  }
+  return nil
+}
+
+// Unload makes sure the given process is not in RAM.
+func (pm *PageManager) Unload(p *process.Process) error {
+  // at some point, we're going to have to remove some page table entries
+  // we're also going to need to release some frames from the resource manager
+  ptLen := len(p.RAMPageTable)
+	pgNumbers := make([]page.Number, ptLen)
+	frNumbers := make([]int, ptLen)
+
+  // go through each page in the RAM page table and zero them out
+  // (so the next process's to get these frames have a clean slate)
+  for pn, fn := range p.RAMPageTable {
+    pm.virtualMachine.RAMFrameWrite(fn, ivm.MakeFrame())
+    // while we're at it, let's fill the array
+    pgNumbers[ptLen - 1] = pn
+		frNumbers[ptLen - 1] = int(fn)
+		ptLen--
+  }
+
+  // give back the frames to the RAM resource manager
+  // (so it can go to some other process at some point)
+  err := pm.ramRM.Release(frNumbers)
+  if err != nil {
+    return err
+  }
+
+  // remove the corresponing entries from the RAM page table
+  // (this is done this way to ensure an entry wasn't missed)
+  for _, pn := range pgNumbers {
+    delete(p.RAMPageTable, pn)
+  }
+
+  // make sure we got all the entries!
+  // if not, this should panic (becasue it's unexpected)
+  if len(p.RAMPageTable) > 0 {
+    log.Printf(
+      "[Unload] %d page table entries still remain!?\n",
+      len(p.RAMPageTable),
+    )
+    panic("RAM page table is not completely cleared!")
+  }
+
   return nil
 }
 
