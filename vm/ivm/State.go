@@ -42,13 +42,14 @@ func (s State) Next() State {
 }
 
 // Apply considers a new state that should replace the existing one.
-func (s *State) Apply(n State) {
+func (s *State) Apply(n State) State {
   s.ProgramCounter = n.ProgramCounter
   copy(s.Registers[:], n.Registers[:])
   s.Halt = false
   s.Caches = n.Caches.Copy()
   s.Faults = n.Faults.Copy()
   s.Error = nil
+  return *s
 }
 
 // RegisterWord returns the given register word value.

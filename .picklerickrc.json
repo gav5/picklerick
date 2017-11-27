@@ -3,5 +3,5 @@
   "outdir": "out",
   "sched": "fcfs",
   "qsize": 40,
-  "maxcycles": 5
+  "maxcycles": 10000
 }

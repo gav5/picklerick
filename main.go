@@ -39,16 +39,16 @@ func main() {
 	virtualMachine.Tick()
 
 	fmt.Println()
-	_ = virtualMachine.FprintProcessTable(os.Stdout)
+	virtualMachine.FprintProcessTable(os.Stdout)
 
 	fmt.Println("\nExecution Logs")
 	virtualMachine.Run()
 
-	fmt.Println()
-	_ = virtualMachine.FprintProcessTable(os.Stdout)
+	// fmt.Println()
+	// _ = virtualMachine.FprintProcessTable(os.Stdout)
 
 	// fmt.Print("\nRAM Dump:\n")
-	// _ = virtualMachine.RAM.Print()
+	// virtualMachine.RAM.Print()
 	// fmt.Print("\n")
 
 	// fmt.Print("\nDisk Dump:\n")

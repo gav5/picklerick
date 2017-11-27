@@ -135,8 +135,8 @@ func (vm VM) setupCore(c *core.Core) {
 			"%s Core #%d has caches: %v\n",
 			callsign, c.CoreNum, c.Process.State.Caches.Slice(),
 		)
-		c.Next = c.Process.State.Next()
 	}
+	c.Next = c.Process.State.Next()
 }
 
 // handleCore manages the final state from the execution of a core instruction.
@@ -159,8 +159,8 @@ func (vm VM) handleCore(c *core.Core) error {
 
 	if c.Next.Halt {
 		log.Printf(
-			"process %d completed on core #%d via HALT\n",
-			c.Process.ProcessNumber, c.CoreNum,
+			"%s process %d completed via HALT\n",
+			callsign, c.Process.ProcessNumber,
 		)
 		// the core said to halt, so the process is now done!
 		vm.osKernel.CompleteProcess(c.Process)
@@ -171,9 +171,8 @@ func (vm VM) handleCore(c *core.Core) error {
 		// looks like there were faults
 		// (something was accessed that wasn't there)
 		log.Printf(
-			"process %d faulted on core #%d: %v\n",
-			c.Process.ProcessNumber, c.CoreNum,
-			c.Next.Faults,
+			"%s process %d faulted: %v\n",
+			callsign, c.Process.ProcessNumber, c.Next.Faults,
 		)
 		c.Process.Status = process.Wait
 		// ensure the faults persist (and nothing else)
@@ -182,8 +181,8 @@ func (vm VM) handleCore(c *core.Core) error {
 		c.Process = nil
 	} else {
 		// this was actually successful, so apply next so it's the actual state
-		log.Printf("applying next state to CORE #%d\n", c.CoreNum)
-		c.Process.State.Apply(c.Next)
+		log.Printf("%s applying next state\n", callsign)
+		c.Process.State = c.Process.State.Apply(c.Next)
 	}
 
 	return nil

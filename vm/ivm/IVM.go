@@ -1,7 +1,7 @@
 package ivm
 
 // NumCores is the number of cores in the virtual machine.
-const NumCores = 4
+const NumCores = 1
 
 // IVM is the kernel interface into the virtual machine.
 // (this is because vm uses the kernel, so we have to avoid circular dependencies)

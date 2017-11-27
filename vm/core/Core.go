@@ -48,8 +48,6 @@ func (c *Core) Call() {
 	)
 	log.Printf("%s Begin execution\n", callsign)
 
-	log.Printf("%s Caches: %v\n", callsign, c.Next.Caches)
-
 	// get the current instruction
 	instruction, err := c.currentInstruction()
 	if err != nil {
@@ -58,9 +56,11 @@ func (c *Core) Call() {
 		return
 	}
 
+
 	// execute the current instruction
 	// (passing in the next state of the system)
 	// (this will be handled by the virtual machine later)
+	log.Printf("%s Executing %v\n", callsign, instruction.Assembly())
 	ip := ivm.MakeInstructionProxy(&c.Next)
 	instruction.Execute(ip)
 }

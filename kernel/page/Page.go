@@ -2,6 +2,7 @@ package page
 
 import (
 	"fmt"
+	"sort"
 
 	"../../prog"
 	"../../vm/ivm"
@@ -16,8 +17,6 @@ type Number ivm.FrameNumber
 // Table is a mapping of PageNumbers to VM FrameNumbers
 type Table map[Number]ivm.FrameNumber
 
-type frameTableType map[ivm.FrameNumber]Number
-
 func (n Number) String() string {
 	return fmt.Sprintf("%03X", int(n))
 }
@@ -28,6 +27,32 @@ func (pt Table) TranslateAddress(addr ivm.Address) ivm.Address {
 	frameAddress := addr % ivm.FrameSize
 	frameNumber := pt[pageNumber]
 	return ivm.Address(frameNumber * ivm.FrameSize) + frameAddress
+}
+
+// PageNumbers returns the page numbers in the page table.
+func (pt Table) PageNumbers() []Number {
+	outary := make([]Number, len(pt))
+	i := 0
+	for pn := range pt {
+		outary[i] = pn
+		i++
+	}
+	sort.Sort(numbersArray(outary))
+	return outary
+}
+
+type numbersArray []Number
+
+func (na numbersArray) Len() int {
+	return len(na)
+}
+
+func (na numbersArray) Less(i, j int) bool {
+	return na[i] < na[j]
+}
+
+func (na numbersArray) Swap(i, j int) {
+	na[i], na[j] = na[j], na[i]
 }
 
 // UsedFrameNumbers returns the frame numbers already used by the page table.
@@ -44,12 +69,19 @@ func (pt Table) FrameNumberForPageNumber(pn Number) ivm.FrameNumber {
 	return pt[pn]
 }
 
-func (ft frameTableType) UsedFrameNumbers() []ivm.FrameNumber {
-	frameNumbers := []ivm.FrameNumber{}
-	for frameNumber := range ft {
-		frameNumbers = append(frameNumbers, frameNumber)
+func (pt Table) String() string {
+	outval := ""
+	pnums := pt.PageNumbers()
+	i := 0
+	for _, pn := range pnums {
+		fn := pt[pn]
+		if i > 0 {
+			outval += " "
+		}
+		outval += fmt.Sprintf("%v:%v", pn, fn)
+		i++
 	}
-	return frameNumbers
+	return outval
 }
 
 // ArrayFromFrameArray returns a list of pages for a given list of frames.
