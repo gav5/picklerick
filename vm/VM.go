@@ -153,8 +153,21 @@ func (vm VM) handleCore(c *core.Core) error {
 
 	if c.Next.Error != nil {
 		// an error occured with the instruction execution
-		// stop what you are doing and worry about that
-		return c.Next.Error
+		log.Printf(
+			"%s process %d threw an ERROR: %v\n",
+			callsign, c.Process.ProcessNumber, c.Next.Error,
+		)
+		// stop the process and declare it a failure
+		// (this should essentially be treated the same as a halt)
+		c.Process.State = c.Process.State.Apply(c.Next)
+		vm.osKernel.CompleteProcess(c.Process)
+		// sine this is done, the process should be cleared
+		// (this sends the message to later fill it if possible)
+		c.Process = nil
+
+		// nil is returned here because there's nothing wrong with the VM
+		// (it will just go to the next process like nothing ever happened)
+		return nil
 	}
 
 	if c.Next.Halt {
@@ -163,6 +176,7 @@ func (vm VM) handleCore(c *core.Core) error {
 			callsign, c.Process.ProcessNumber,
 		)
 		// the core said to halt, so the process is now done!
+		c.Process.State = c.Process.State.Apply(c.Next)
 		vm.osKernel.CompleteProcess(c.Process)
 		// since this is done, the process should be cleared
 		// (this sends the message to later fill it if possible)
