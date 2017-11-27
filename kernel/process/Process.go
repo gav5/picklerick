@@ -1,6 +1,8 @@
 package process
 
 import (
+	"log"
+
 	"../page"
 	"../program"
 	"../../metric"
@@ -52,9 +54,8 @@ type Process struct {
 	// Footprint stores the number of frames/pages required to store this process
 	Footprint int
 
-	// State describes the current status of the process
-	// (ex: if it is running, waiting, etc)
-	Status Status
+
+	status Status
 
 	isSleep bool
 }
@@ -72,7 +73,7 @@ func Make(p program.Program) Process {
 		Footprint:			4,
 		Program: 				p,
 		State:					ivm.MakeState(),
-		Status:					New,
+		status:					New,
 		isSleep:				false,
 	}
 }
@@ -90,9 +91,69 @@ func Sleep() Process {
 		Footprint: 0,
 		Program: program.Sleep(),
 		State: ivm.Sleep(),
-		Status: Ready,
+		status: Ready,
 		isSleep: true,
 	}
+}
+
+// Status describes the current status of the process
+// (ex: if it is running, waiting, etc)
+func (p Process) Status() Status {
+	return p.status
+}
+
+// SetStatus mutates the status to a new value.
+func (p *Process) SetStatus(val Status) {
+	if p.status == val {
+		// nothing needs to be done here!
+		return
+	}
+	switch (p.status) {
+	case New:
+		// can only become Ready here!
+		if val != Ready {
+			log.Panicf(
+				"[Process] cannot transition from %v to %v\n",
+				p.status, val,
+			)
+		}
+		break
+	case Ready:
+		// can only become Run here!
+		if val != Run {
+			log.Panicf(
+				"[Process] cannot transition from %v to %v\n",
+				p.status, val,
+			)
+		}
+	case Run:
+		// can only become Wait or Terminated here!
+		switch val {
+		case Wait, Terminated:
+			break
+		default:
+			log.Panicf(
+				"[Process] cannot transition from %v to %v\n",
+				p.status, val,
+			)
+		}
+	case Wait:
+		// can only become Ready here!
+		if val != Ready {
+			log.Panicf(
+				"[Process] cannot transition from %v to %v\n",
+				p.status, val,
+			)
+		}
+	case Terminated:
+		// this should not be changed from anything else
+		// (it's the termination point)
+		log.Panicf(
+			"[Process] cannot transition from %v to %v\n",
+			p.status, val,
+		)
+	}
+	(*p).status = val
 }
 
 // MakeArray makes an array of Processes from a given array of programs.

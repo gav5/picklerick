@@ -88,8 +88,6 @@ func (pm *PageManager) Load(p *process.Process) error {
     frame := pm.virtualMachine.DiskFrameFetch(dfn)
     pm.virtualMachine.RAMFrameWrite(rfn, frame)
   }
-  // since the process is loaded into RAM, it's ready to run!
-  p.Status = process.Ready
   return nil
 }
 

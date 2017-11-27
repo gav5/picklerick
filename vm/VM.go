@@ -74,12 +74,28 @@ func (vm *VM) runCycle() error {
 	vm.tick()
 	defer vm.tock()
 
-	// setup and call each core in sequence
+	// setup each core in sequence first
+	processNums := make([]uint8, ivm.NumCores)
+	for i := range vm.Cores {
+		vm.setupCore(&vm.Cores[i])
+		// make sure this one hasn't been given out already
+		processNumber := vm.Cores[i].Process.ProcessNumber
+		for _, pn := range processNums {
+			if processNumber == pn {
+				// this one has already been handed out!
+				// this should get reported
+				return ProcessAllocationError{vm.Cores}
+			}
+		}
+		processNums[i] = processNumber
+	}
+	log.Printf("%s Process Allocation: %v\n", vm.callsign(), processNums)
+
+	// call each core in sequence
 	// (wait for each to complete after that)
 	var wg sync.WaitGroup
 	for i := range vm.Cores {
 		wg.Add(1)
-		vm.setupCore(&vm.Cores[i])
 		go func(c *core.Core){
 			defer wg.Done()
 			c.Call()
@@ -96,6 +112,21 @@ func (vm *VM) runCycle() error {
 	}
 	return nil
 }
+
+// ProcessAllocationError is when the same process is allocated more than once.
+type ProcessAllocationError struct {
+	cores [ivm.NumCores]core.Core
+}
+func (err ProcessAllocationError) Error() string {
+	processNums := [ivm.NumCores]uint8{}
+	for i, c := range err.cores {
+		processNums[i] = c.Process.ProcessNumber
+	}
+	return fmt.Sprintf(
+		"the same process has been over-allocated: %v", processNums,
+	)
+}
+
 
 func (vm VM) tick() {
 	// log.Printf("%s Tick!\n", vm.callsign())
@@ -187,7 +218,7 @@ func (vm VM) handleCore(c *core.Core) error {
 			"%s process %d faulted: %v\n",
 			callsign, c.Process.ProcessNumber, c.Next.Faults,
 		)
-		c.Process.Status = process.Wait
+		c.Process.SetStatus(process.Wait)
 		// ensure the faults persist (and nothing else)
 		c.Process.State.Faults = c.Next.Faults.Copy()
 		vm.osKernel.UpdateProcess(c.Process)

@@ -37,17 +37,20 @@ func MakeArray() [ivm.NumCores]Core {
 
 // Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() {
-	// if c.Process.ProcessNumber == nil {
-	// 	log.Printf("[CORE%d:XXX] NO PROCESS\n", c.CoreNum)
-	// 	// probably just nearing the end, so do nothing!
-	// 	return
-	// }
 
-	callsign := fmt.Sprintf(
-		"[CORE%d:%04x]",
-		c.CoreNum, uint(c.Process.State.ProgramCounter),
-	)
-	// log.Printf("%s Begin execution\n", callsign)
+	var callsign string
+	if c.Process.IsSleep() {
+		callsign = fmt.Sprintf(
+			"[CORE%d:00/zzzz]",
+			c.CoreNum,
+		)
+	} else {
+		callsign = fmt.Sprintf(
+			"[CORE%d:%02d/%04x]",
+			c.CoreNum, c.Process.ProcessNumber,
+			uint(c.Process.State.ProgramCounter),
+		)
+	}
 
 	// get the current instruction
 	instruction, err := c.currentInstruction()

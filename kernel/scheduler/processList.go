@@ -1,6 +1,9 @@
 package scheduler
 
 import "../process"
+import "log"
+import "io"
+import "fmt"
 
 type processList struct {
   base []process.Process
@@ -22,7 +25,19 @@ func (pl processList) Swap(i, j int) {
 
 // Push is for the heap interface
 func (pl *processList) Push(x interface{}) {
-  (*pl).base = append(pl.base, x.(process.Process))
+  p := x.(process.Process)
+  if p.IsSleep() {
+    log.Panicf("[processList.Push] Error: cannot push in a sleep process!\n")
+  }
+  for _, px := range pl.base {
+    if p.ProcessNumber == px.ProcessNumber {
+      log.Panicf(
+        "[processList.Push] Error: duplicate process number: %d\n",
+        p.ProcessNumber,
+      )
+    }
+  }
+  (*pl).base = append(pl.base, p)
 }
 
 // Pop is for the heap interface
@@ -34,5 +49,17 @@ func (pl *processList) Pop() interface{} {
   return x
 }
 
-// NOTE: need to load into ProcessManager first
-// (then add elements to RAM, add remaining to disk)
+func (pl processList) fprint(w io.Writer) error {
+  for i := pl.Len()-1; i >= 0; i-- {
+    p := pl.base[i]
+    out := fmt.Sprintf(
+      "[%02d] %-10s p%02d (%d instructions) {RAM: %2d pages} {Disk: %2d pages}\n",
+      p.ProcessNumber, p.Status(), p.Priority,
+      p.CodeSize, len(p.RAMPageTable), len(p.DiskPageTable),
+    )
+    if _, err := w.Write([]byte(out)); err != nil {
+      return err
+    }
+  }
+  return nil
+}
