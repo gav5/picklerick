@@ -5,7 +5,7 @@ type InstructionProxy struct {
 	// core ICore
 	// ram  IRAM
 	// pagingProxy PagingProxy
-	state *State
+	State *State
 }
 
 // MakeInstructionProxy makes an InstructionProxy instance
@@ -15,57 +15,61 @@ func MakeInstructionProxy(state *State) InstructionProxy {
 
 // ProgramCounter returns the value of the program counter.
 func (ip InstructionProxy) ProgramCounter() Address {
-	return ip.state.ProgramCounter
+	return ip.State.ProgramCounter
 }
 
 // SetProgramCounter sets the program counter to the indicated value.
 func (ip InstructionProxy) SetProgramCounter(val Address) {
-	ip.state.ProgramCounter = val
+	ip.State.ProgramCounter = val
 }
 
 // Halt halts program execution.
 func (ip InstructionProxy) Halt() {
-	ip.state.Halt = true
+	ip.State.Halt = true
+}
+
+func (ip InstructionProxy) Error(err error) {
+	ip.State.Error = err
 }
 
 // RegisterWord returns the given register word value.
 func (ip InstructionProxy) RegisterWord(regNum RegisterDesignation) Word {
-	return ip.state.RegisterWord(regNum)
+	return ip.State.RegisterWord(regNum)
 }
 
 // SetRegisterWord sets the given register to the given word value.
 func (ip InstructionProxy) SetRegisterWord(regNum RegisterDesignation, val Word) {
-	ip.state.SetRegisterWord(regNum, val)
+	ip.State.SetRegisterWord(regNum, val)
 }
 
 // RegisterUint32 returns the given register uint32 value.
 func (ip InstructionProxy) RegisterUint32(regNum RegisterDesignation) uint32 {
-	return ip.state.RegisterUint32(regNum)
+	return ip.State.RegisterUint32(regNum)
 }
 
 // SetRegisterUint32 sets the given register to the given uint32 value.
 func (ip InstructionProxy) SetRegisterUint32(regNum RegisterDesignation, val uint32) {
-	ip.state.SetRegisterUint32(regNum, val)
+	ip.State.SetRegisterUint32(regNum, val)
 }
 
 // RegisterInt32 returns the given register int32 value.
 func (ip InstructionProxy) RegisterInt32(regNum RegisterDesignation) int32 {
-	return ip.state.RegisterInt32(regNum)
+	return ip.State.RegisterInt32(regNum)
 }
 
 // SetRegisterInt32 sets the given register to the given int32 value.
 func (ip InstructionProxy) SetRegisterInt32(regNum RegisterDesignation, val int32) {
-	ip.state.SetRegisterInt32(regNum, val)
+	ip.State.SetRegisterInt32(regNum, val)
 }
 
 // RegisterBool returns the given register bool value.
 func (ip InstructionProxy) RegisterBool(regNum RegisterDesignation) bool {
-	return ip.state.RegisterBool(regNum)
+	return ip.State.RegisterBool(regNum)
 }
 
 // SetRegisterBool sets the given register to the given bool value.
 func (ip InstructionProxy) SetRegisterBool(regNum RegisterDesignation, val bool) {
-	ip.state.SetRegisterBool(regNum, val)
+	ip.State.SetRegisterBool(regNum, val)
 }
 
 func (ip InstructionProxy) translateAddress(addr Address) (FrameNumber, int) {
@@ -75,10 +79,10 @@ func (ip InstructionProxy) translateAddress(addr Address) (FrameNumber, int) {
 // AddressFetchWord returns the word value at the given address.
 func (ip InstructionProxy) AddressFetchWord(addr Address) Word {
 	frameNum, frameIndex := ip.translateAddress(addr)
-	frame, ok := ip.state.Caches[frameNum]
+	frame, ok := ip.State.Caches[frameNum]
 	if !ok {
 		// this is a fault, so we should add it
-		ip.state.Faults.Set(frameNum)
+		ip.State.Faults.Set(frameNum)
 		// return a blank value (it will produce garbage anyway)
 		return 0x00000000
 	}
@@ -88,14 +92,14 @@ func (ip InstructionProxy) AddressFetchWord(addr Address) Word {
 // AddressWriteWord writes the given word value to the given address.
 func (ip InstructionProxy) AddressWriteWord(addr Address, val Word) {
 	frameNum, frameIndex := ip.translateAddress(addr)
-	frame, ok := ip.state.Caches[frameNum]
+	frame, ok := ip.State.Caches[frameNum]
 	if !ok {
 		// this is a fault, so we should add it and early exit
-		ip.state.Faults.Set(frameNum)
+		ip.State.Faults.Set(frameNum)
 		return
 	}
 	frame[frameIndex] = val
-	ip.state.Caches[frameNum] = frame
+	ip.State.Caches[frameNum] = frame
 }
 
 // AddressFetchUint32 returns the uint32 value at the given address.
