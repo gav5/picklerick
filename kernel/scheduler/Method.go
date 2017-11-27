@@ -22,8 +22,8 @@ const (
 
 // FCFS sorts processes using a First-Come-First-Serve policy.
 func FCFS(p1, p2 process.Process) bool {
-  // false is returned here so nothing gets moved
-  return false
+  // sort by the process number (low to high)
+  return p1.ProcessNumber > p2.ProcessNumber
 }
 
 // Priority sorts processes using the priority number of the process.
