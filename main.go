@@ -42,7 +42,10 @@ func main() {
 	virtualMachine.FprintProcessTable(os.Stdout)
 
 	fmt.Println("\nExecution Logs")
-	virtualMachine.Run()
+	err = virtualMachine.Run()
+	if err != nil {
+		fmt.Printf("\nError Report:\n%v\n", err)
+	}
 
 	// fmt.Println()
 	// _ = virtualMachine.FprintProcessTable(os.Stdout)
