@@ -16,31 +16,26 @@ import (
 // VM is the virtual computer system.
 type VM struct {
 	Clock Clock
-	Cores [ivm.NumCores]*core.Core
+	Cores [ivm.NumCores]core.Core
 	RAM   RAM
 	Disk  Disk
 	osKernel *kernel.Kernel
 	reporter disp.ProgressReporter
 	receiver disp.ProgressReceiver
+	maxCycles uint
 }
-
-// NOTE: this is how far it goes before it crashes!
-const maxCount = 100
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
 	progress := make(chan disp.Progress)
 	vm := &VM{
 		Clock: 0x00000000,
-		Cores: [ivm.NumCores]*core.Core{},
+		Cores: core.MakeArray(),
 		RAM:  MakeRAM(),
 		Disk: Disk{},
 		reporter: disp.ProgressReporter(progress),
 		receiver: disp.ProgressReceiver(progress),
-	}
-	// build each CPU Core
-	for coreNum := uint8(0); coreNum < ivm.NumCores; coreNum++ {
-		vm.Cores[coreNum] = core.New(coreNum+1)
+		maxCycles: c.MaxCycles,
 	}
 	// setup and configure the kernel
 	var err error
@@ -53,7 +48,7 @@ func New(c config.Config) (*VM, error) {
 
 // Run runs the virtual machine.
 func (vm *VM) Run() error {
-	for vm.Clock = 0x00000000; vm.Clock < maxCount; vm.Clock++ {
+	for vm.Clock = 0x00000000; vm.Clock < Clock(vm.maxCycles); vm.Clock++ {
 		// run a virtual machine cycle (and check for errors)
 		if err := vm.runCycle(); err != nil {
 			return err
@@ -65,7 +60,7 @@ func (vm *VM) Run() error {
 			return nil
 		}
 	}
-	log.Printf("[VM:XXX] reached end of cycle limit: %d\n", maxCount)
+	log.Printf("[VM:XXX] reached end of cycle limit: %d\n", vm.maxCycles)
 	return nil
 }
 
@@ -82,19 +77,19 @@ func (vm *VM) runCycle() error {
 	// setup and call each core in sequence
 	// (wait for each to complete after that)
 	var wg sync.WaitGroup
-	for _, c := range vm.Cores {
+	for i := range vm.Cores {
 		wg.Add(1)
-		vm.setupCore(c)
-		go func(){
+		vm.setupCore(&vm.Cores[i])
+		go func(c *core.Core){
 			defer wg.Done()
 			c.Call()
-		}()
+		}(&vm.Cores[i])
 	}
 
 	// after all cores are done, handle what they did
 	wg.Wait()
-	for _, c := range vm.Cores {
-		err := vm.handleCore(c)
+	for i := range vm.Cores {
+		err := vm.handleCore(&vm.Cores[i])
 		if err != nil {
 			return err
 		}
@@ -103,30 +98,43 @@ func (vm *VM) runCycle() error {
 }
 
 func (vm VM) tick() {
-	log.Printf("%s Tick!\n", vm.callsign())
+	// log.Printf("%s Tick!\n", vm.callsign())
 	vm.osKernel.Tick()
 }
 
 func (vm VM) tock() {
-	log.Printf("%s Tock!\n", vm.callsign())
+	// log.Printf("%s Tock!\n", vm.callsign())
 	vm.osKernel.Tock()
 }
 
 // setupCore sets up the core to run some process.
 // If necessary, it will get a new process from the Kernel.
 func (vm VM) setupCore(c *core.Core) {
-	log.Printf(
-		"%s Setting up Core #%d\n",
-		vm.callsign(), c.CoreNum,
-	)
 	if c.Process == nil {
 		// we need to give this core a process!
 		// the Kernel will know which one to do next!
 		c.Process = vm.osKernel.ProcessForCore(c.CoreNum)
 		if c.Process == nil {
 			// obviously the kernel wants this core to sleep
+			log.Printf(
+				"%s Setting up Core #%d to SLEEP\n",
+				vm.callsign(), c.CoreNum,
+			)
 			return
 		}
+		callsign := vm.callsign()
+		log.Printf(
+			"%s Setting up Core #%d with process #%d\n",
+			callsign, c.CoreNum, c.Process.ProcessNumber,
+		)
+		log.Printf(
+			"%s Core #%d has page table: %v\n",
+			callsign, c.CoreNum, c.Process.RAMPageTable,
+		)
+		log.Printf(
+			"%s Core #%d has caches: %v\n",
+			callsign, c.CoreNum, c.Process.State.Caches.Slice(),
+		)
 		c.Next = c.Process.State.Next()
 	}
 }
@@ -150,6 +158,10 @@ func (vm VM) handleCore(c *core.Core) error {
 	}
 
 	if c.Next.Halt {
+		log.Printf(
+			"process %d completed on core #%d via HALT\n",
+			c.Process.ProcessNumber, c.CoreNum,
+		)
 		// the core said to halt, so the process is now done!
 		vm.osKernel.CompleteProcess(c.Process)
 		// since this is done, the process should be cleared
@@ -158,9 +170,20 @@ func (vm VM) handleCore(c *core.Core) error {
 	} else if len(c.Next.Faults) > 0 {
 		// looks like there were faults
 		// (something was accessed that wasn't there)
+		log.Printf(
+			"process %d faulted on core #%d: %v\n",
+			c.Process.ProcessNumber, c.CoreNum,
+			c.Next.Faults,
+		)
 		c.Process.Status = process.Wait
+		// ensure the faults persist (and nothing else)
+		c.Process.State.Faults = c.Next.Faults.Copy()
 		vm.osKernel.UpdateProcess(c.Process)
 		c.Process = nil
+	} else {
+		// this was actually successful, so apply next so it's the actual state
+		log.Printf("applying next state to CORE #%d\n", c.CoreNum)
+		c.Process.State.Apply(c.Next)
 	}
 
 	return nil

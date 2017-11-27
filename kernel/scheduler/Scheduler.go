@@ -7,6 +7,7 @@ import (
   "fmt"
   // "log"
 
+  "../../config"
   "../process"
   "../program"
   "../pageManager"
@@ -18,18 +19,20 @@ type Scheduler struct {
   completed []process.Process
   pm *pageManager.PageManager
   methodName string
+  longTermQueueSize uint
 }
 
 // New creates a new scheduler.
-func New(m string, p *pageManager.PageManager, a []program.Program) *Scheduler {
+func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Scheduler {
   sched := &Scheduler{
     processList: &processList{
       base: process.MakeArray(a),
-      sortMethod: MethodForSwitch(m),
+      sortMethod: MethodForSwitch(c.Sched),
     },
     completed: []process.Process{},
     pm: p,
-    methodName: m,
+    methodName: c.Sched,
+    longTermQueueSize: c.QSize,
   }
 
   // sort the whole thing
@@ -42,21 +45,6 @@ func New(m string, p *pageManager.PageManager, a []program.Program) *Scheduler {
   return sched
 }
 
-// Import brings in a list of programs.
-// func (sched Scheduler) Import(pary []program.Program) {
-//   for i, prog := range pary {
-//     proc := process.Make(prog)
-//     sched.Push(proc)
-//     // heap.Fix(sched.processList, i)
-//   }
-// }
-
-// Push adds a process to the list to be executed.
-// func (sched Scheduler) Push(p process.Process) {
-//   sched.processList.Push(p)
-//   sched.pm.Setup(&p)
-// }
-
 // Tick is used to signal the start of a virtual machine cycle to the kernel.
 // This sets up processes and resources before the next cycle begins.
 func (sched Scheduler) Tick() {
@@ -64,16 +52,35 @@ func (sched Scheduler) Tick() {
   // TODO: handle processes that shouldn't be in RAM anymore
   // run the long-term scheduler
   sched.Long()
-  // run the short-term scheduler
-  sched.Short()
+}
+
+// Tock is used to signal the end of a virtual machine cycle to the kernel.
+// This reacts to the events that occured during the cycle.
+func (sched Scheduler) Tock() {
+  // check back through previous requests and try to fulfill them
+  sched.pm.HandleWaitlist()
+  // make sure any waiting processes have what they need
+  sched.Each(func(p *process.Process) {
+    if p.Status == process.Wait {
+      err := sched.pm.Reallocate(p)
+      if err == nil {
+        p.Status = process.Ready
+      }
+    }
+  })
 }
 
 // ProcessForCore returns the appropriate process for the given core.
 func (sched Scheduler) ProcessForCore(corenum uint8) *process.Process {
   // Look for the first process that is ready to be run
-  return sched.FindBy(func(p *process.Process) bool {
+  p := sched.FindBy(func(p *process.Process) bool {
     return p.Status == process.Ready
   })
+  if p != nil {
+    // make sure the process is ready to be run on the given core
+    sched.Short(corenum, p)
+  }
+  return p
 }
 
 // Update updates an existing process in the list.
@@ -175,8 +182,8 @@ func (sched Scheduler) findPair(fn func(*process.Process) bool) (int, *process.P
 func (sched Scheduler) FprintProcessTable(w io.Writer) error {
   combined := append(sched.processList.base, sched.completed...)
   header := fmt.Sprintf(
-    "Process Table (%d Processes, sorted using %s)\n",
-    len(combined), sched.methodName,
+    "Process Table (%d processes, sort method: %s, queue size: %d)\n",
+    len(combined), sched.methodName, sched.longTermQueueSize,
   )
   if _, err := w.Write([]byte(header)); err != nil {
     return err
@@ -184,7 +191,7 @@ func (sched Scheduler) FprintProcessTable(w io.Writer) error {
   for i := len(combined)-1; i >= 0; i-- {
     p := combined[i]
     out := fmt.Sprintf(
-      "[%02d] %v p%02d (%d instructions) {RAM: %d pages} {Disk: %d pages}\n",
+      "[%02d] %-10s p%02d (%d instructions) {RAM: %2d pages} {Disk: %2d pages}\n",
       p.ProcessNumber, p.Status, p.Priority,
       p.CodeSize, len(p.RAMPageTable), len(p.DiskPageTable),
     )

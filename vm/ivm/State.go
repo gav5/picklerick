@@ -5,8 +5,8 @@ type State struct {
   ProgramCounter Address
   Registers [NumCoreRegisters]Word
   Halt bool
-  Caches []Frame
-  Faults []FrameNumber
+  Caches FrameCache
+  Faults FaultList
   Error error
 }
 
@@ -16,8 +16,8 @@ func MakeState() State {
     ProgramCounter: 0x00000000,
     Registers: [NumCoreRegisters]Word{},
     Halt: false,
-    Caches: []Frame{},
-    Faults: []FrameNumber{},
+    Caches: FrameCache{},
+    Faults: map[FrameNumber]bool{},
     Error: nil,
   }
   // zero out each register
@@ -33,14 +33,22 @@ func (s State) Next() State {
     ProgramCounter: s.ProgramCounter + 4,
     Registers: [NumCoreRegisters]Word{},
     Halt: false,
-    Caches: []Frame{},
-    Faults: []FrameNumber{},
+    Caches: s.Caches.Copy(),
+    Faults: s.Faults.Copy(),
     Error: nil,
   }
   copy(next.Registers[:], s.Registers[:])
-  copy(next.Caches[:][:], s.Caches[:][:])
-  copy(next.Faults[:], s.Faults[:])
   return next
+}
+
+// Apply considers a new state that should replace the existing one.
+func (s *State) Apply(n State) {
+  s.ProgramCounter = n.ProgramCounter
+  copy(s.Registers[:], n.Registers[:])
+  s.Halt = false
+  s.Caches = n.Caches.Copy()
+  s.Faults = n.Faults.Copy()
+  s.Error = nil
 }
 
 // RegisterWord returns the given register word value.

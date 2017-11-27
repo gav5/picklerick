@@ -1,6 +1,8 @@
 package pageManager
 
 import (
+  "log"
+
   "../../vm/ivm"
   "../page"
   "../process"
@@ -56,6 +58,15 @@ func (pm PageManager) AvailableRAM() int {
   return pm.ramRM.QuantityAvailable()
 }
 
+// CachesForProcess returns the appropriate caches for the given process.
+func (pm PageManager) CachesForProcess(p *process.Process) ivm.FrameCache {
+  caches := make(ivm.FrameCache)
+  for pn, fn := range p.RAMPageTable {
+    caches[ivm.FrameNumber(pn)] = pm.virtualMachine.RAMFrameFetch(fn)
+  }
+  return caches
+}
+
 // Load makes sure the given pages are in RAM.
 func (pm *PageManager) Load(p *process.Process) error {
   // the initial claim will be the instructions and data footprint
@@ -76,6 +87,8 @@ func (pm *PageManager) Load(p *process.Process) error {
     frame := pm.virtualMachine.DiskFrameFetch(dfn)
     pm.virtualMachine.RAMFrameWrite(rfn, frame)
   }
+  // since the process is loaded into RAM, it's ready to run!
+  p.Status = process.Ready
   return nil
 }
 
@@ -84,9 +97,18 @@ func (pm *PageManager) Load(p *process.Process) error {
 func (pm *PageManager) Reallocate(p *process.Process) error {
   err := pm.reallocate(p)
   if err != nil {
+    log.Printf(
+      "[Reallocate] process %d reallocation error: %v\n",
+      p.ProcessNumber, err,
+    )
     // the request cannot be granted!
     // add the process to the waitlist
     pm.waitlist = append(pm.waitlist, p)
+  } else {
+    log.Printf(
+      "[Reallocate] process %d reallocated: %v\n",
+      p.ProcessNumber, p.RAMPageTable,
+    )
   }
   return err
 }
@@ -97,8 +119,17 @@ func (pm *PageManager) HandleWaitlist() {
   for i, p := range pm.waitlist {
     err := pm.reallocate(p)
     if err == nil {
+      log.Printf(
+        "[HandleWaitlist] process %d reallocated!\n",
+        p.ProcessNumber,
+      )
       // remove from the waitlist (later)
       completed = append(completed, i)
+    } else {
+      log.Printf(
+        "[HandleWaitlist] process %d error: %v\n",
+        p.ProcessNumber, err,
+      )
     }
   }
   // remove the completed processes from the waitlist
@@ -113,16 +144,22 @@ func (pm *PageManager) HandleWaitlist() {
 
 func (pm *PageManager) reallocate(p *process.Process) error {
   numFaults := len(p.State.Faults)
-  frameNums, err := pm.diskRM.Claim(numFaults)
+  frameNums, err := pm.ramRM.Claim(numFaults)
   if err != nil {
     return err
   }
   p.Footprint += numFaults
-  for i, x := range p.State.Faults {
+  i := 0
+  for x, v := range p.State.Faults {
+    if !v {
+      panic("expected true!")
+    }
     pn := page.Number(x)
     fn := ivm.FrameNumber(frameNums[i])
-    pm.virtualMachine.DiskFrameWrite(fn, ivm.MakeFrame())
+    pm.virtualMachine.RAMFrameWrite(fn, ivm.MakeFrame())
     p.RAMPageTable[pn] = fn
+    i++
   }
+  p.State.Faults = ivm.FaultList{}
   return nil
 }

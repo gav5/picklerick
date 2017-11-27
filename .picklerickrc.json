@@ -1,5 +1,7 @@
 {
   "progfile": "Program-File.txt",
   "outdir": "out",
-  "sched": "fcfs"
+  "sched": "fcfs",
+  "qsize": 40,
+  "maxcycles": 5
 }

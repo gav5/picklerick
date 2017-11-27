@@ -69,37 +69,33 @@ func (ip InstructionProxy) SetRegisterBool(regNum RegisterDesignation, val bool)
 }
 
 func (ip InstructionProxy) translateAddress(addr Address) (FrameNumber, int) {
-	// get the correct spot in the cache
-	frameNum := FrameNumber(addr/FrameSize)
-	// make sure this is an available space (or maybe we have to make it?)
-	if int(frameNum) > len(ip.state.Caches) - 1 {
-		return frameNum, -1
-	}
-	frameIndex := int(addr % FrameSize)
-	return frameNum, frameIndex
+	return FrameNumber(addr/FrameSize), int(addr % FrameSize)
 }
 
 // AddressFetchWord returns the word value at the given address.
 func (ip InstructionProxy) AddressFetchWord(addr Address) Word {
 	frameNum, frameIndex := ip.translateAddress(addr)
-	if frameIndex == -1 {
+	frame, ok := ip.state.Caches[frameNum]
+	if !ok {
 		// this is a fault, so we should add it
-		ip.state.Faults = append(ip.state.Faults, frameNum)
+		ip.state.Faults.Set(frameNum)
 		// return a blank value (it will produce garbage anyway)
 		return 0x00000000
 	}
-	return ip.state.Caches[frameNum][frameIndex]
+	return frame[frameIndex]
 }
 
 // AddressWriteWord writes the given word value to the given address.
 func (ip InstructionProxy) AddressWriteWord(addr Address, val Word) {
 	frameNum, frameIndex := ip.translateAddress(addr)
-	if frameIndex == -1 {
+	frame, ok := ip.state.Caches[frameNum]
+	if !ok {
 		// this is a fault, so we should add it and early exit
-		ip.state.Faults = append(ip.state.Faults, frameNum)
+		ip.state.Faults.Set(frameNum)
 		return
 	}
-	ip.state.Caches[frameNum][frameIndex] = val
+	frame[frameIndex] = val
+	ip.state.Caches[frameNum] = frame
 }
 
 // AddressFetchUint32 returns the uint32 value at the given address.

@@ -5,6 +5,8 @@ type Config struct {
 	Progfile 	string `json:"progfile"`
 	Outdir   	string `json:"outdir"`
 	Sched			string `json:"sched"`
+	QSize			uint `json:"qsize"`
+	MaxCycles uint `json:"maxcycles"`
 }
 
 // private global variable for the config value

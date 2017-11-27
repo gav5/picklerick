@@ -1,6 +1,8 @@
 package page
 
 import (
+	"fmt"
+
 	"../../prog"
 	"../../vm/ivm"
 )
@@ -15,6 +17,10 @@ type Number ivm.FrameNumber
 type Table map[Number]ivm.FrameNumber
 
 type frameTableType map[ivm.FrameNumber]Number
+
+func (n Number) String() string {
+	return fmt.Sprintf("%03X", int(n))
+}
 
 // TranslateAddress translates a paged address into a raw frame Address.
 func (pt Table) TranslateAddress(addr ivm.Address) ivm.Address {

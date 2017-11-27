@@ -34,7 +34,7 @@ func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
     virtualMachine: virtualMachine,
     pm: pageManager.Make(virtualMachine),
   }
-  k.sched = scheduler.New(c.Sched, &k.pm, programs)
+  k.sched = scheduler.New(c, &k.pm, programs)
 
   return k, nil
 }
@@ -49,7 +49,8 @@ func (k Kernel) Tick() {
 // Tock is used to signal the end of a virtual machine cycle to the kernel.
 // This reacts to the events that occured during the cycle.
 func (k Kernel) Tock() {
-  // TODO: make Tock()
+  // defer to the Scheduler
+  k.sched.Tock()
 }
 
 // ProcessForCore returns the appropriate process for the given core.

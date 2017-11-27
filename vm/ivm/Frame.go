@@ -25,6 +25,13 @@ func MakeFrame() Frame {
 	}
 }
 
+// Copy makes a duplicate frame.
+func (f Frame) Copy() Frame {
+	c := Frame{}
+	copy(c[:], f[:])
+	return c
+}
+
 // FrameArrayFromWordArray builds a frame array for a given array of words.
 func FrameArrayFromWordArray(ary []Word) []Frame {
 	numFrames := int(math.Ceil(float64(len(ary)) / FrameSize))

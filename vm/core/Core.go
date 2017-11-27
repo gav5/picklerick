@@ -16,28 +16,39 @@ type Core struct {
 	Next ivm.State
 }
 
-// New makes a new core.
-func New(coreNum uint8) *Core {
-	core := &Core{
+// Make builds a new core.
+func Make(coreNum uint8) Core {
+	return Core{
 		CoreNum: coreNum,
 		Next: ivm.MakeState(),
 	}
-	return core
+}
+
+// MakeArray builds an array of cores.
+// (the size is determined by the IVM number of cores)
+func MakeArray() [ivm.NumCores]Core {
+	cores := [ivm.NumCores]Core{}
+	for i := range cores {
+		cores[i] = Make(uint8(i+1))
+	}
+	return cores
 }
 
 // Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() {
+	if c.Process == nil {
+		log.Printf("[CORE%d:XXX] NO PROCESS\n", c.CoreNum)
+		// probably just nearing the end, so do nothing!
+		return
+	}
+
 	callsign := fmt.Sprintf(
 		"[CORE%d:%04x]",
 		c.CoreNum, uint(c.Process.State.ProgramCounter),
 	)
 	log.Printf("%s Begin execution\n", callsign)
 
-	if c.Process == nil {
-		log.Printf("%s NO PROCESS\n", callsign)
-		// probably just nearing the end, so do nothing!
-		return
-	}
+	log.Printf("%s Caches: %v\n", callsign, c.Next.Caches)
 
 	// get the current instruction
 	instruction, err := c.currentInstruction()
@@ -55,10 +66,8 @@ func (c *Core) Call() {
 }
 
 func (c Core) currentInstruction() (ivm.Instruction, error) {
-	instructions := c.Process.State.Caches[:c.Process.Program.InputBufferSize]
-	frameNum := int(c.Process.State.ProgramCounter/ivm.FrameSize)
-	frameIndex := int(c.Process.State.ProgramCounter%ivm.FrameSize)
-	raw := uint32(instructions[frameNum][frameIndex])
+	pc := c.Process.State.ProgramCounter
+	raw := c.Process.State.Caches.AddressFetchWord(pc).Uint32()
 	instr, err := decoder.DecodeInstruction(raw)
 	if err != nil {
 		return nil, err
