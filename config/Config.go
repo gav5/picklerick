@@ -2,8 +2,11 @@ package config
 
 // Config describes the configration of the application
 type Config struct {
-	Progfile string `json:"progfile"`
-	Outdir   string `json:"outdir"`
+	Progfile 	string `json:"progfile"`
+	Outdir   	string `json:"outdir"`
+	Sched			string `json:"sched"`
+	QSize			uint `json:"qsize"`
+	MaxCycles uint `json:"maxcycles"`
 }
 
 // private global variable for the config value

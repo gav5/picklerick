@@ -4,59 +4,57 @@ import (
 	"log"
 
 	"./config"
-	"./cpu"
-	"./cpuType"
-	"./disp"
-	"./proc"
-	"./prog"
-	"./ram"
+	"./vm"
+	"os"
+	"fmt"
+	// "./disp"
 )
 
 func main() {
-	ram.SetData(0x01, 0xFFFFFFFF)
-	ram.SetData(0x02, 0xAAAAAAAA)
-
 	var err error
 	var sharedConfig config.Config
-	var programArray []prog.Program
+	var virtualMachine *vm.VM
 
 	// load app configuration
-	if sharedConfig, err = config.Shared(); err != nil {
+	sharedConfig, err = config.Shared()
+	if err != nil {
 		log.Fatalf("error extracting shared configuration: %v", err)
 		return
 	}
 
 	// introduce program, display configuration
-	log.Println("picklerick OS")
-	log.Printf("program file: %s\n", sharedConfig.Progfile)
+	fmt.Println("\npicklerick OS")
+	fmt.Printf("progfile:\t%s\n", sharedConfig.Progfile)
+	fmt.Printf("outdir:\t\t%s\n", sharedConfig.Outdir)
+	fmt.Printf("sched:\t\t%s\n", sharedConfig.Sched)
+	fmt.Printf("qsize:\t\t%d\n", sharedConfig.QSize)
+	fmt.Println()
 
-	// parse file and display assembly code for each job
-	if programArray, err = prog.ParseFile(sharedConfig.Progfile); err != nil {
-		log.Fatalf("error parsing program file: %v\n", err)
+	// build the virtual machine with the given config
+	virtualMachine, err = vm.New(sharedConfig)
+	if err != nil {
+		log.Fatalf("error building virtual machine: %v", err)
 		return
 	}
+	virtualMachine.Tick()
 
-	c := cpu.State{}
+	fmt.Println()
+	virtualMachine.FprintProcessTable(os.Stdout)
 
-	if len(sharedConfig.Outdir) > 0 {
-		disp.CleanOutDir(sharedConfig.Outdir)
+	fmt.Println("\nExecution Logs")
+	err = virtualMachine.Run()
+	if err != nil {
+		fmt.Printf("\nError Report:\n%v\n", err)
 	}
 
-	for _, p := range programArray {
-		pcb := proc.MakePCB(p)
-		c.ContextSwitch(pcb)
-		for !c.ShouldHalt {
-			c.Next()
-		}
-		if len(sharedConfig.Outdir) > 0 {
-			disp.ProgramOutputFile(sharedConfig.Outdir, cpuType.CPU{ID: 1, State: cpuType.State(c)})
-		}
-	}
+	fmt.Println()
+	_ = virtualMachine.FprintProcessTable(os.Stdout)
 
-	// load the ASM output file (if applicable)
-	// if len(sharedConfig.Outdir) > 0 {
-	// 	disp.MakeAll(sharedConfig.Outdir, programArray, []cpuType.CPU{
-	// 		cpuType.CPU{ID: 1, State: cpuType.State(c)},
-	// 	})
-	// }
+	// fmt.Print("\nRAM Dump:\n")
+	// virtualMachine.RAM.Print()
+	// fmt.Print("\n")
+
+	// fmt.Print("\nDisk Dump:\n")
+	// _ = virtualMachine.Disk.Print()
+	// fmt.Print("\n")
 }
