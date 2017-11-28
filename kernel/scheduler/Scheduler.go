@@ -45,7 +45,12 @@ func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Sche
 
   // make sure each process is set up with the page manager
   sched.Each(func(p *process.Process) {
-    sched.pm.Setup(p)
+    err := sched.pm.Setup(p)
+    if err != nil {
+      log.Panicf("[Scheduler] New() error: %v\n", err)
+    }
+    (*p).SetStatus(process.Ready)
+    sched.Update(*p)
   })
   return sched
 }
