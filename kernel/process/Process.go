@@ -5,7 +5,6 @@ import (
 
 	"../page"
 	"../program"
-	"../../metric"
 	"../../vm/ivm"
 )
 
@@ -41,13 +40,7 @@ type Process struct {
 	// Priority is used for sorting purposes
 	Priority uint8
 
-	Metrics struct {
-		JobWaitTime       metric.StopwatchMetric
-		JobCompletionTime metric.StopwatchMetric
-		IOOperationCount  metric.CountMetricUint32
-		RAMUse            metric.FractionalMetricUint32
-		CacheUse          metric.FractionalMetricUint32
-	}
+	Metrics Metrics
 
 	Program program.Program
 
@@ -104,55 +97,13 @@ func (p Process) Status() Status {
 
 // SetStatus mutates the status to a new value.
 func (p *Process) SetStatus(val Status) {
-	if p.status == val {
-		// nothing needs to be done here!
-		return
-	}
-	switch (p.status) {
-	case New:
-		// can only become Ready here!
-		if val != Ready {
-			log.Panicf(
-				"[Process] cannot transition from %v to %v\n",
-				p.status, val,
-			)
-		}
-		break
-	case Ready:
-		// can only become Run here!
-		if val != Run {
-			log.Panicf(
-				"[Process] cannot transition from %v to %v\n",
-				p.status, val,
-			)
-		}
-	case Run:
-		// can only become Wait or Terminated here!
-		switch val {
-		case Wait, Terminated:
-			break
-		default:
-			log.Panicf(
-				"[Process] cannot transition from %v to %v\n",
-				p.status, val,
-			)
-		}
-	case Wait:
-		// can only become Ready here!
-		if val != Ready {
-			log.Panicf(
-				"[Process] cannot transition from %v to %v\n",
-				p.status, val,
-			)
-		}
-	case Terminated:
-		// this should not be changed from anything else
-		// (it's the termination point)
+	if !validateTransition(p.status, val) {
 		log.Panicf(
 			"[Process] cannot transition from %v to %v\n",
 			p.status, val,
 		)
 	}
+	(*p).Metrics.ReactToStatus(p.status, val)
 	(*p).status = val
 }
 
