@@ -151,20 +151,6 @@ func (vm VM) setupCore(c *core.Core) {
 		// we need to give this core a process!
 		// the Kernel will know which one to do next!
 		c.Process = vm.osKernel.ProcessForCore(c.CoreNum)
-
-		// callsign := vm.callsign()
-		// logger.Printf(
-		// 	"%s Setting up Core #%d with process #%d\n",
-		// 	callsign, c.CoreNum, c.Process.ProcessNumber,
-		// )
-		// logger.Printf(
-		// 	"%s Core #%d has page table: %v\n",
-		// 	callsign, c.CoreNum, c.Process.RAMPageTable,
-		// )
-		// logger.Printf(
-		// 	"%s Core #%d has caches: %v\n",
-		// 	callsign, c.CoreNum, c.Process.State.Caches.Slice(),
-		// )
 	}
 	c.Next = c.Process.State.Next()
 }
