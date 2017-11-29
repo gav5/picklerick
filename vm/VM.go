@@ -1,44 +1,44 @@
 package vm
 
 import (
-	"../disp"
-	"./ivm"
-	"./core"
-	"../kernel"
 	"../config"
+	"../disp"
+	"../kernel"
 	"../kernel/process"
 	"../util/logger"
-	"sync"
-	"io"
+	"./core"
+	"./ivm"
 	"fmt"
+	"io"
 	"log"
+	"sync"
 )
 
 // VM is the virtual computer system.
 type VM struct {
-	Clock Clock
-	Cores [ivm.NumCores]core.Core
-	RAM   RAM
-	Disk  Disk
-	osKernel *kernel.Kernel
-	reporter disp.ProgressReporter
-	receiver disp.ProgressReceiver
+	Clock     Clock
+	Cores     [ivm.NumCores]core.Core
+	RAM       RAM
+	Disk      Disk
+	osKernel  *kernel.Kernel
+	reporter  disp.ProgressReporter
+	receiver  disp.ProgressReceiver
 	maxCycles uint
-	logger *log.Logger
+	logger    *log.Logger
 }
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
 	progress := make(chan disp.Progress)
 	vm := &VM{
-		Clock: 0x00000000,
-		Cores: core.MakeArray(),
-		RAM:  MakeRAM(),
-		Disk: Disk{},
-		reporter: disp.ProgressReporter(progress),
-		receiver: disp.ProgressReceiver(progress),
+		Clock:     0x00000000,
+		Cores:     core.MakeArray(),
+		RAM:       MakeRAM(),
+		Disk:      Disk{},
+		reporter:  disp.ProgressReporter(progress),
+		receiver:  disp.ProgressReceiver(progress),
 		maxCycles: c.MaxCycles,
-		logger: logger.New("vm"),
+		logger:    logger.New("vm"),
 	}
 	// setup and configure the kernel
 	var err error
@@ -98,7 +98,7 @@ func (vm *VM) runCycle() error {
 	var wg sync.WaitGroup
 	for i := range vm.Cores {
 		wg.Add(1)
-		go func(c *core.Core){
+		go func(c *core.Core) {
 			defer wg.Done()
 			c.Call()
 		}(&vm.Cores[i])
@@ -119,6 +119,7 @@ func (vm *VM) runCycle() error {
 type ProcessAllocationError struct {
 	cores [ivm.NumCores]core.Core
 }
+
 func (err ProcessAllocationError) Error() string {
 	processNums := [ivm.NumCores]uint8{}
 	for i, c := range err.cores {
@@ -128,7 +129,6 @@ func (err ProcessAllocationError) Error() string {
 		"the same process has been over-allocated: %v", processNums,
 	)
 }
-
 
 func (vm VM) tick() {
 	// logger.Printf("%s Tick!\n", vm.callsign())
@@ -151,14 +151,22 @@ func (vm VM) setupCore(c *core.Core) {
 		// we need to give this core a process!
 		// the Kernel will know which one to do next!
 		c.Process = vm.osKernel.ProcessForCore(c.CoreNum)
+		// if the process is anything but "Run" we have a problem!
+		if c.Process.Status() != process.Run {
+			vm.logger.Panicf(
+				"process %d (given to core %d) is %v (should be Run)",
+				c.Process.ProcessNumber, c.CoreNum, c.Process.Status(),
+			)
+		}
 	}
-	c.Next = c.Process.State.Next()
+	c.Next = c.Process.State().Next()
 }
 
 // handleCore manages the final state from the execution of a core instruction.
 // This unpacks that information and passes it to the Kernel.
 func (vm VM) handleCore(c *core.Core) error {
-	// logger.Printf("%s Handling Core #%d\n", callsign, c.CoreNum)
+	vm.logger.Printf("handle core %d", c.CoreNum)
+	s := c.Process.State()
 
 	if c.Process.IsSleep() {
 		// there was no process, so an early exit is in order
@@ -172,12 +180,17 @@ func (vm VM) handleCore(c *core.Core) error {
 			"process %d threw an ERROR: %v\n",
 			c.Process.ProcessNumber, c.Next.Error,
 		)
+
+		// apply the next state to the current one
+		// (and make sure to persist)
+		c.Process.SetState(s.Apply(c.Next))
+
 		// stop the process and declare it a failure
 		// (this should essentially be treated the same as a halt)
-		c.Process.State = c.Process.State.Apply(c.Next)
 		vm.osKernel.CompleteProcess(&c.Process)
 		vm.osKernel.UpdateProcess(c.Process)
-		// sine this is done, the process should be cleared
+
+		// since this is done, the process should be cleared
 		// (this sends the message to later fill it if possible)
 		c.Process = process.Sleep()
 
@@ -192,7 +205,11 @@ func (vm VM) handleCore(c *core.Core) error {
 			c.Process.ProcessNumber,
 		)
 		// the core said to halt, so the process is now done!
-		c.Process.State = c.Process.State.Apply(c.Next)
+
+		// apply the next state to the current one
+		// (make sure to save this!)
+		c.Process.SetState(s.Apply(c.Next))
+
 		vm.osKernel.CompleteProcess(&c.Process)
 		vm.osKernel.UpdateProcess(c.Process)
 		// since this is done, the process should be cleared
@@ -207,13 +224,13 @@ func (vm VM) handleCore(c *core.Core) error {
 		)
 		c.Process.SetStatus(process.Wait)
 		// ensure the faults persist (and nothing else)
-		c.Process.State.Faults = c.Next.Faults.Copy()
+		s.Faults = c.Next.Faults.Copy()
+		c.Process.SetState(s)
 		vm.osKernel.UpdateProcess(c.Process)
 		c.Process = process.Sleep()
 	} else {
 		// this was actually successful, so apply next so it's the actual state
-		// logger.Printf("%s applying next state\n", callsign)
-		c.Process.State = c.Process.State.Apply(c.Next)
+		c.Process.SetState(s.Apply(c.Next))
 	}
 
 	return nil

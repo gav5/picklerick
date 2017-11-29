@@ -60,8 +60,9 @@ func (c *Core) Call() {
 }
 
 func (c Core) currentInstruction() (ivm.Instruction, error) {
-	pc := c.Process.State.ProgramCounter
-	raw := c.Process.State.Caches.AddressFetchWord(pc).Uint32()
+	s := c.Process.State()
+	pc := s.ProgramCounter
+	raw := s.Caches.AddressFetchWord(pc).Uint32()
 	instr, err := decoder.DecodeInstruction(raw)
 	if err != nil {
 		return nil, err
@@ -113,6 +114,6 @@ func (c Core) logPrefix() string {
 	return fmt.Sprintf(
 		"core%d:%02d/%04x | ",
 		c.CoreNum, c.Process.ProcessNumber,
-		uint(c.Process.State.ProgramCounter),
+		uint(c.Process.State().ProgramCounter),
 	)
 }

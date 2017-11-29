@@ -2,10 +2,12 @@ package process
 
 import (
 	"log"
+	"fmt"
 
 	"../page"
 	"../program"
 	"../../vm/ivm"
+	"../../util/logger"
 )
 
 // Process is used to represent process execution
@@ -18,8 +20,7 @@ type Process struct {
 	// ProgramCounter (PC) describes where the program is at in execution
 	ProgramCounter ivm.Address
 
-	// State contains the operational state of the CPU
-	State ivm.State
+	state ivm.State
 
 	// CodeSize indicates the size of the code for the given process
 	CodeSize uint8
@@ -51,6 +52,7 @@ type Process struct {
 	status Status
 
 	isSleep bool
+	logger *log.Logger
 }
 
 // Make makes a Process from a given program
@@ -65,9 +67,10 @@ func Make(p program.Program) Process {
 		DiskPageTable:	make(page.Table),
 		Footprint:			4,
 		Program: 				p,
-		State:					ivm.MakeState(),
+		state:					ivm.MakeState(),
 		status:					New,
 		isSleep:				false,
+		logger: 				logger.New(fmt.Sprintf("process%02d", p.JobID)),
 	}
 }
 
@@ -83,10 +86,24 @@ func Sleep() Process {
 		DiskPageTable: make(page.Table),
 		Footprint: 0,
 		Program: program.Sleep(),
-		State: ivm.Sleep(),
+		state: ivm.Sleep(),
 		status: Ready,
 		isSleep: true,
 	}
+}
+
+// State contains the operational state of the CPU
+func (p Process) State() ivm.State {
+	return p.state
+}
+
+// SetState mutates the state of the process to a new value.
+func (p *Process) SetState(val ivm.State) {
+	p.logger.Printf("set state to %#v", val)
+	p.logger.Printf("state currently %#v", p.state)
+
+	(*p).state = val
+	p.logger.Printf("state is now %#v", p.state)
 }
 
 // Status describes the current status of the process
@@ -97,14 +114,20 @@ func (p Process) Status() Status {
 
 // SetStatus mutates the status to a new value.
 func (p *Process) SetStatus(val Status) {
+	p.logger.Printf(
+		"set status from %v to %v",
+		p.status, val,
+	)
 	if !validateTransition(p.status, val) {
-		log.Panicf(
-			"[Process] cannot transition from %v to %v\n",
+		p.logger.Panicf(
+			"cannot transition from %v to %v",
 			p.status, val,
 		)
 	}
+	old := p.status
 	(*p).Metrics.ReactToStatus(p.status, val)
 	(*p).status = val
+	p.logger.Printf("status now %v (was %v)", p.status, old)
 }
 
 // MakeArray makes an array of Processes from a given array of programs.

@@ -3,6 +3,6 @@
   "outdir": "out",
   "sched": "fcfs",
   "qsize": 200,
-  "maxcycles": 100000,
+  "maxcycles": 10000,
   "quiet": false
 }

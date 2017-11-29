@@ -265,8 +265,9 @@ func (pm *PageManager) HandleWaitlist() {
 
 func (pm *PageManager) reallocate(p *process.Process) error {
   pm.logger.Printf("reallocate process %d", p.ProcessNumber)
+  state := p.State()
 
-  numFaults := len(p.State.Faults)
+  numFaults := len(state.Faults)
   pm.logger.Printf(
     "claiming %d frames of RAM to reallocate process %d",
     numFaults, p.ProcessNumber,
@@ -285,11 +286,11 @@ func (pm *PageManager) reallocate(p *process.Process) error {
     p.ProcessNumber, numFaults, p.Footprint,
   )
   i := 0
-  for x, v := range p.State.Faults {
+  for x, v := range state.Faults {
     if !v {
       pm.logger.Panicf(
         "expected true in faults for process %d: %v",
-        p.ProcessNumber, p.State.Faults,
+        p.ProcessNumber, state.Faults,
       )
     }
     pn := page.Number(x)
@@ -302,6 +303,7 @@ func (pm *PageManager) reallocate(p *process.Process) error {
     "process %d RAM page table now %v",
     p.ProcessNumber, p.RAMPageTable,
   )
-  p.State.Faults = ivm.FaultList{}
+  state.Faults = ivm.FaultList{}
+  p.SetState(state)
   return nil
 }
