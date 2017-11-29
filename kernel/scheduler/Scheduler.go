@@ -9,6 +9,7 @@ import (
   "log"
 
   "../../config"
+  "../../util/logger"
   "../process"
   "../program"
   "../pageManager"
@@ -22,6 +23,7 @@ type Scheduler struct {
   pm *pageManager.PageManager
   methodName string
   longTermQueueSize uint
+  logger *log.Logger
 }
 
 // New creates a new scheduler.
@@ -38,6 +40,7 @@ func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Sche
     pm: p,
     methodName: c.Sched,
     longTermQueueSize: c.QSize,
+    logger: logger.New("scheduler"),
   }
 
   // sort the whole thing
@@ -47,7 +50,7 @@ func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Sche
   sched.Each(func(p *process.Process) {
     err := sched.pm.Setup(p)
     if err != nil {
-      log.Panicf("[Scheduler] New() error: %v\n", err)
+      sched.logger.Panicf("[Scheduler] New() error: %v", err)
     }
     (*p).SetStatus(process.Ready)
     sched.Update(*p)
@@ -139,10 +142,13 @@ func (sched *Scheduler) Save(p *process.Process) error {
 
 // Unload makes sure the given process is not in RAM.
 func (sched *Scheduler) Unload(p *process.Process) error {
-  log.Printf("[Unload] process %d should be unloaded\n", p.ProcessNumber)
+  sched.logger.Printf(
+    "[Unload] process %d should be unloaded",
+    p.ProcessNumber,
+  )
 
   if p.Status() != process.Terminated {
-    log.Panicf(
+    sched.logger.Panicf(
       "[Unload] process %d is not terminated (is %v)",
       p.ProcessNumber, p.Status,
     )
@@ -166,8 +172,8 @@ func (sched *Scheduler) removeProcess(p *process.Process) error {
   if index == -1 {
     return NotFoundError{}
   }
-  log.Printf(
-    "[removeProcess] (before: %d) %d completed\n",
+  sched.logger.Printf(
+    "[removeProcess] (before: %d) %d completed",
     p.ProcessNumber, sched.completed.Len(),
   )
 
@@ -179,8 +185,8 @@ func (sched *Scheduler) removeProcess(p *process.Process) error {
   // add to the completed list
   sched.completed.Push(*p)
   sort.Sort(sched.completed)
-  log.Printf(
-    "[removeProcess] (after: %d) %d completed\n",
+  sched.logger.Printf(
+    "[removeProcess] (after: %d) %d completed",
     p.ProcessNumber, sched.completed.Len(),
   )
   return nil

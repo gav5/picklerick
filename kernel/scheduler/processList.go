@@ -27,12 +27,12 @@ func (pl processList) Swap(i, j int) {
 func (pl *processList) Push(x interface{}) {
   p := x.(process.Process)
   if p.IsSleep() {
-    log.Panicf("[processList.Push] Error: cannot push in a sleep process!\n")
+    log.Panicf("[processList.Push] Error: cannot push in a sleep process!")
   }
   for _, px := range pl.base {
     if p.ProcessNumber == px.ProcessNumber {
       log.Panicf(
-        "[processList.Push] Error: duplicate process number: %d\n",
+        "[processList.Push] Error: duplicate process number: %d",
         p.ProcessNumber,
       )
     }

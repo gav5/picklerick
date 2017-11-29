@@ -4,6 +4,7 @@ import (
   "log"
   "fmt"
 
+  "../../util/logger"
   "../../vm/ivm"
   "../page"
   "../process"
@@ -16,6 +17,7 @@ type PageManager struct {
   ramRM *resourceManager.ResourceManager
   diskRM *resourceManager.ResourceManager
   waitlist []*process.Process
+  logger *log.Logger
 }
 
 // Make builds a new PageManager instance.
@@ -25,6 +27,7 @@ func Make(virtualMachine ivm.IVM) PageManager {
     ramRM: resourceManager.New(ivm.RAMNumFrames),
     diskRM: resourceManager.New(ivm.DiskNumFrames),
     waitlist: []*process.Process{},
+    logger: logger.New("pageManager"),
   }
   return pm
 }
@@ -155,7 +158,7 @@ func (pm *PageManager) Unload(p *process.Process) error {
   // make sure we got all the entries!
   // if not, this should panic (becasue it's unexpected)
   if len(p.RAMPageTable) > 0 {
-    log.Printf(
+    pm.logger.Printf(
       "[Unload] %d page table entries still remain!?\n",
       len(p.RAMPageTable),
     )
@@ -170,7 +173,7 @@ func (pm *PageManager) Unload(p *process.Process) error {
 func (pm *PageManager) Reallocate(p *process.Process) error {
   err := pm.reallocate(p)
   if err != nil {
-    log.Printf(
+    pm.logger.Printf(
       "[Reallocate] process %d reallocation error: %v\n",
       p.ProcessNumber, err,
     )
@@ -178,7 +181,7 @@ func (pm *PageManager) Reallocate(p *process.Process) error {
     // add the process to the waitlist
     pm.waitlist = append(pm.waitlist, p)
   } else {
-    log.Printf(
+    pm.logger.Printf(
       "[Reallocate] process %d reallocated: %v\n",
       p.ProcessNumber, p.RAMPageTable,
     )
@@ -192,14 +195,14 @@ func (pm *PageManager) HandleWaitlist() {
   for i, p := range pm.waitlist {
     err := pm.reallocate(p)
     if err == nil {
-      log.Printf(
+      pm.logger.Printf(
         "[HandleWaitlist] process %d reallocated!\n",
         p.ProcessNumber,
       )
       // remove from the waitlist (later)
       completed = append(completed, i)
     } else {
-      log.Printf(
+      pm.logger.Printf(
         "[HandleWaitlist] process %d error: %v\n",
         p.ProcessNumber, err,
       )
@@ -225,7 +228,7 @@ func (pm *PageManager) reallocate(p *process.Process) error {
   i := 0
   for x, v := range p.State.Faults {
     if !v {
-      panic("expected true!")
+      pm.logger.Panic("expected true!")
     }
     pn := page.Number(x)
     fn := ivm.FrameNumber(frameNums[i])

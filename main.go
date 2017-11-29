@@ -1,13 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"./config"
+	"./util/logger"
 	"./vm"
-	"os"
-	"fmt"
-	// "./disp"
 )
 
 func main() {
@@ -20,6 +19,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("error extracting shared configuration: %v", err)
 		return
+	}
+
+	// set up logger based on given configurations
+	if err = logger.Init(sharedConfig); err != nil {
+		log.Fatalf("error setting up logger: %v", err)
 	}
 
 	// introduce program, display configuration
@@ -36,19 +40,17 @@ func main() {
 		log.Fatalf("error building virtual machine: %v", err)
 		return
 	}
-	virtualMachine.Tick()
 
-	fmt.Println()
-	virtualMachine.FprintProcessTable(os.Stdout)
+	// fmt.Println()
+	// virtualMachine.FprintProcessTable(os.Stdout)
 
-	fmt.Println("\nExecution Logs")
 	err = virtualMachine.Run()
 	if err != nil {
 		fmt.Printf("\nError Report:\n%v\n", err)
 	}
 
-	fmt.Println()
-	_ = virtualMachine.FprintProcessTable(os.Stdout)
+	// fmt.Println()
+	// _ = virtualMachine.FprintProcessTable(os.Stdout)
 
 	// fmt.Print("\nRAM Dump:\n")
 	// virtualMachine.RAM.Print()

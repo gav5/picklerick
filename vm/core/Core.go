@@ -3,10 +3,10 @@ package core
 import (
 	"fmt"
 	"log"
-	"../decoder"
-	"../../kernel/process"
 	"../ivm"
-	// "../../kernel/page"
+	"../decoder"
+	"../../util/logger"
+	"../../kernel/process"
 )
 
 // Core describes a CPU Core in the virtual machine.
@@ -14,6 +14,7 @@ type Core struct {
 	CoreNum	uint8
 	Process process.Process
 	Next ivm.State
+	logger *log.Logger
 }
 
 // Make builds a new core.
@@ -22,6 +23,8 @@ func Make(coreNum uint8) Core {
 		CoreNum: coreNum,
 		Process: process.Sleep(), // <- obviously this is a bad assumption
 		Next: ivm.MakeState(),
+		logger: logger.New(fmt.Sprintf("core%d", coreNum)),
+
 	}
 }
 
@@ -37,25 +40,12 @@ func MakeArray() [ivm.NumCores]Core {
 
 // Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() {
-
-	var callsign string
-	if c.Process.IsSleep() {
-		callsign = fmt.Sprintf(
-			"[CORE%d:00/zzzz]",
-			c.CoreNum,
-		)
-	} else {
-		callsign = fmt.Sprintf(
-			"[CORE%d:%02d/%04x]",
-			c.CoreNum, c.Process.ProcessNumber,
-			uint(c.Process.State.ProgramCounter),
-		)
-	}
+	c.logger.SetPrefix(c.logPrefix())
 
 	// get the current instruction
 	instruction, err := c.currentInstruction()
 	if err != nil {
-		log.Printf("%s INSTR DECODE ERR: %v\n", callsign, err)
+		c.logger.Printf("INSTR DECODE ERR: %v", err)
 		c.Next.Error = err
 		return
 	}
@@ -64,7 +54,7 @@ func (c *Core) Call() {
 	// execute the current instruction
 	// (passing in the next state of the system)
 	// (this will be handled by the virtual machine later)
-	log.Printf("%s Executing %v\n", callsign, instruction.Assembly())
+	c.logger.Printf("Executing %v", instruction.Assembly())
 	ip := ivm.MakeInstructionProxy(&c.Next)
 	instruction.Execute(ip)
 }
@@ -82,14 +72,14 @@ func (c Core) currentInstruction() (ivm.Instruction, error) {
 // Apply a process to the given CPU Core.
 func (c *Core) Apply(p *process.Process) {
 	if p == nil {
-		log.Printf("[CPU%d] NO JOB\n", c.CoreNum)
+		c.logger.Printf("NO JOB")
 
 		c.Process = process.Sleep()
 		// c.ShouldHalt = true
 		return
 	}
 	// if c.CurrentProcess != p {
-	// 	log.Printf(
+	// 	c.logger.Printf(
 	// 		"[CPU%d] Job #%d\n",
 	// 		c.CoreNum, p.ProcessNumber,
 	// 	)
@@ -111,4 +101,18 @@ func (c *Core) Save() {
 	// if c.ShouldHalt {
 	// 	c.CurrentProcess.Status = process.Done
 	// }
+}
+
+func (c Core) logPrefix() string {
+	if c.Process.IsSleep() {
+		return fmt.Sprintf(
+			"core%d:00/zzzz | ",
+			c.CoreNum,
+		)
+	}
+	return fmt.Sprintf(
+		"core%d:%02d/%04x | ",
+		c.CoreNum, c.Process.ProcessNumber,
+		uint(c.Process.State.ProgramCounter),
+	)
 }

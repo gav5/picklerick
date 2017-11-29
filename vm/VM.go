@@ -7,10 +7,11 @@ import (
 	"../kernel"
 	"../config"
 	"../kernel/process"
-	"log"
+	"../util/logger"
 	"sync"
 	"io"
 	"fmt"
+	"log"
 )
 
 // VM is the virtual computer system.
@@ -23,6 +24,7 @@ type VM struct {
 	reporter disp.ProgressReporter
 	receiver disp.ProgressReceiver
 	maxCycles uint
+	logger *log.Logger
 }
 
 // New makes a new virtual machine.
@@ -36,6 +38,7 @@ func New(c config.Config) (*VM, error) {
 		reporter: disp.ProgressReporter(progress),
 		receiver: disp.ProgressReceiver(progress),
 		maxCycles: c.MaxCycles,
+		logger: logger.New("vm"),
 	}
 	// setup and configure the kernel
 	var err error
@@ -43,6 +46,8 @@ func New(c config.Config) (*VM, error) {
 	if err != nil {
 		return vm, err
 	}
+	// run one tick to get everything together
+	vm.tick()
 	return vm, nil
 }
 
@@ -56,19 +61,16 @@ func (vm *VM) Run() error {
 		// handle if there's nothing left to do (according to the Kernel)
 		// (obviously when this is the case we should break out of the loop)
 		if vm.osKernel.IsDone() {
-			log.Printf("%s Kernel is DONE: breaking!\n", vm.callsign())
+			vm.logger.Printf("Kernel is DONE: breaking!")
 			return nil
 		}
 	}
-	log.Printf("[VM:XXX] reached end of cycle limit: %d\n", vm.maxCycles)
+	vm.logger.Printf("reached end of cycle limit: %d", vm.maxCycles)
 	return nil
 }
 
-func (vm *VM) Tick() {
-	vm.tick()
-}
-
 func (vm *VM) runCycle() error {
+	vm.logger.SetPrefix(vm.loggingPrefix())
 
 	// ensure the calls for Tick and Tock to the Kernel
 	vm.tick()
@@ -89,7 +91,7 @@ func (vm *VM) runCycle() error {
 		}
 		processNums[i] = processNumber
 	}
-	log.Printf("%s Process Allocation: %v\n", vm.callsign(), processNums)
+	vm.logger.Printf("Process Allocation: %v", processNums)
 
 	// call each core in sequence
 	// (wait for each to complete after that)
@@ -129,15 +131,15 @@ func (err ProcessAllocationError) Error() string {
 
 
 func (vm VM) tick() {
-	// log.Printf("%s Tick!\n", vm.callsign())
+	// logger.Printf("%s Tick!\n", vm.callsign())
 	vm.osKernel.Tick()
 }
 
 func (vm VM) tock() {
-	// log.Printf("%s Tock!\n", vm.callsign())
+	// logger.Printf("%s Tock!\n", vm.callsign())
 	err := vm.osKernel.Tock()
 	if err != nil {
-		log.Printf("%s Tock error: %v\n", vm.callsign(), err)
+		vm.logger.Printf("Tock error: %v", err)
 		panic("Tock error: " + err.Error())
 	}
 }
@@ -151,15 +153,15 @@ func (vm VM) setupCore(c *core.Core) {
 		c.Process = vm.osKernel.ProcessForCore(c.CoreNum)
 
 		// callsign := vm.callsign()
-		// log.Printf(
+		// logger.Printf(
 		// 	"%s Setting up Core #%d with process #%d\n",
 		// 	callsign, c.CoreNum, c.Process.ProcessNumber,
 		// )
-		// log.Printf(
+		// logger.Printf(
 		// 	"%s Core #%d has page table: %v\n",
 		// 	callsign, c.CoreNum, c.Process.RAMPageTable,
 		// )
-		// log.Printf(
+		// logger.Printf(
 		// 	"%s Core #%d has caches: %v\n",
 		// 	callsign, c.CoreNum, c.Process.State.Caches.Slice(),
 		// )
@@ -170,8 +172,7 @@ func (vm VM) setupCore(c *core.Core) {
 // handleCore manages the final state from the execution of a core instruction.
 // This unpacks that information and passes it to the Kernel.
 func (vm VM) handleCore(c *core.Core) error {
-	callsign := vm.callsign()
-	// log.Printf("%s Handling Core #%d\n", callsign, c.CoreNum)
+	// logger.Printf("%s Handling Core #%d\n", callsign, c.CoreNum)
 
 	if c.Process.IsSleep() {
 		// there was no process, so an early exit is in order
@@ -181,9 +182,9 @@ func (vm VM) handleCore(c *core.Core) error {
 
 	if c.Next.Error != nil {
 		// an error occured with the instruction execution
-		log.Printf(
-			"%s process %d threw an ERROR: %v\n",
-			callsign, c.Process.ProcessNumber, c.Next.Error,
+		vm.logger.Printf(
+			"process %d threw an ERROR: %v\n",
+			c.Process.ProcessNumber, c.Next.Error,
 		)
 		// stop the process and declare it a failure
 		// (this should essentially be treated the same as a halt)
@@ -200,9 +201,9 @@ func (vm VM) handleCore(c *core.Core) error {
 	}
 
 	if c.Next.Halt {
-		log.Printf(
-			"%s process %d completed via HALT\n",
-			callsign, c.Process.ProcessNumber,
+		vm.logger.Printf(
+			"process %d completed via HALT",
+			c.Process.ProcessNumber,
 		)
 		// the core said to halt, so the process is now done!
 		c.Process.State = c.Process.State.Apply(c.Next)
@@ -214,9 +215,9 @@ func (vm VM) handleCore(c *core.Core) error {
 	} else if len(c.Next.Faults) > 0 {
 		// looks like there were faults
 		// (something was accessed that wasn't there)
-		log.Printf(
-			"%s process %d faulted: %v\n",
-			callsign, c.Process.ProcessNumber, c.Next.Faults,
+		vm.logger.Printf(
+			"process %d faulted: %v\n",
+			c.Process.ProcessNumber, c.Next.Faults,
 		)
 		c.Process.SetStatus(process.Wait)
 		// ensure the faults persist (and nothing else)
@@ -225,81 +226,17 @@ func (vm VM) handleCore(c *core.Core) error {
 		c.Process = process.Sleep()
 	} else {
 		// this was actually successful, so apply next so it's the actual state
-		// log.Printf("%s applying next state\n", callsign)
+		// logger.Printf("%s applying next state\n", callsign)
 		c.Process.State = c.Process.State.Apply(c.Next)
 	}
 
 	return nil
 }
 
-func (vm VM) callsign() string {
-	return fmt.Sprintf("[VM:%d]", vm.Clock)
-}
-
 // FprintProcessTable prints the process table to the given writer.
 func (vm VM) FprintProcessTable(w io.Writer) error {
 	return vm.osKernel.FprintProcessTable(w)
 }
-
-// ProgramCounter returns the value of the program counter (PC).
-// func (vm VM) ProgramCounter(corenum uint8) ivm.Address {
-// 	return vm.Cores[corenum].Process.State.ProgramCounter
-// }
-
-// SetProgramCounter sets the value of the program counter to the given value.
-// func (vm *VM) SetProgramCounter(corenum uint8, addr ivm.Address) {
-// 	vm.Cores[corenum].Process.State.ProgramCounter = addr
-// }
-
-// Halt halts current program execution.
-// func (vm *VM) Halt(corenum uint8) {
-// 	vm.Cores[corenum].Halt()
-// }
-
-// ResetCore resets the state to start over (undoing a halt)
-// func (vm *VM) ResetCore(corenum uint8) {
-// 	vm.Cores[corenum].Reset()
-// }
-
-// RegisterWord returns the given register word value.
-// func (vm VM) RegisterWord(corenum uint8, regNum ivm.RegisterDesignation) ivm.Word {
-// 	return vm.Cores[corenum].RegisterWord(regNum)
-// }
-
-// SetRegisterWord sets the given register to the given word value.
-// func (vm *VM) SetRegisterWord(corenum uint8, regNum ivm.RegisterDesignation, val ivm.Word) {
-// 	vm.Cores[corenum].SetRegisterWord(regNum, val)
-// }
-
-// RegisterUint32 returns the given register uint32 value.
-// func (vm VM) RegisterUint32(corenum uint8, regNum ivm.RegisterDesignation) uint32 {
-// 	return vm.Cores[corenum].RegisterUint32(regNum)
-// }
-
-// SetRegisterUint32 sets the given register to the given uint32 value.
-// func (vm *VM) SetRegisterUint32(corenum uint8, regNum ivm.RegisterDesignation, val uint32) {
-// 	vm.Cores[corenum].SetRegisterUint32(regNum, val)
-// }
-
-// RegisterInt32 returns the given register int32 value.
-// func (vm VM) RegisterInt32(corenum uint8, regNum ivm.RegisterDesignation) int32 {
-// 	return vm.Cores[corenum].RegisterInt32(regNum)
-// }
-
-// SetRegisterInt32 sets the given register to the given int32 value.
-// func (vm *VM) SetRegisterInt32(corenum uint8, regNum ivm.RegisterDesignation, val int32) {
-// 	vm.Cores[corenum].SetRegisterInt32(regNum, val)
-// }
-
-// RegisterBool returns the given register bool value.
-// func (vm VM) RegisterBool(corenum uint8, regNum ivm.RegisterDesignation) bool {
-// 	return vm.Cores[corenum].RegisterBool(regNum)
-// }
-
-// SetRegisterBool sets the given register to the given bool value.
-// func (vm *VM) SetRegisterBool(corenum uint8, regNum ivm.RegisterDesignation, val bool) {
-// 	vm.Cores[corenum].SetRegisterBool(regNum, val)
-// }
 
 // RAMAddressFetchWord returns the word value at the given address.
 func (vm VM) RAMAddressFetchWord(addr ivm.Address) ivm.Word {
@@ -359,4 +296,8 @@ func (vm VM) DiskFrameFetch(frameNum ivm.FrameNumber) ivm.Frame {
 // DiskFrameWrite writes the frame at the given frame number.
 func (vm *VM) DiskFrameWrite(frameNum ivm.FrameNumber, frame ivm.Frame) {
 	vm.Disk.FrameWrite(frameNum, frame)
+}
+
+func (vm VM) loggingPrefix() string {
+	return fmt.Sprintf("vm:%d | ", vm.Clock)
 }

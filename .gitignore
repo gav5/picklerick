@@ -2,3 +2,5 @@
 /picklerick.exe
 /out
 /debug
+/log
+*.log

@@ -7,7 +7,19 @@ type Config struct {
 	Sched			string `json:"sched"`
 	QSize			uint `json:"qsize"`
 	MaxCycles uint `json:"maxcycles"`
+	Quiet			bool `json:"quiet"`
 }
+
+// Default is the default value to use for d/c conditions
+var Default = Config{
+	Progfile: "Program-File.txt",
+	Outdir: "out",
+  Sched: "fcfs",
+  QSize: 200,
+  MaxCycles: 100000,
+  Quiet: true,
+}
+
 
 // private global variable for the config value
 var globalShared *Config

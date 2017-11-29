@@ -3,6 +3,7 @@ package kernel
 import (
   "../vm/ivm"
   "../config"
+  "../util/logger"
   "./pageManager"
   "./scheduler"
   "./process"
@@ -18,22 +19,27 @@ type Kernel struct {
   virtualMachine ivm.IVM
   pm pageManager.PageManager
   sched *scheduler.Scheduler
+  logger *log.Logger
 }
 
 // New makes a kernel with the given virtual machine.
 func New(virtualMachine ivm.IVM, c config.Config) (*Kernel, error) {
-  // load the programs from file (via loader)
-  programs, err := loader.Load(c.Progfile)
-  if err != nil {
-    return nil, err
-  }
-  log.Printf("Got %d programs!\n", len(programs))
 
   k := &Kernel{
     config: c,
     virtualMachine: virtualMachine,
     pm: pageManager.Make(virtualMachine),
+    logger: logger.New("kernel"),
   }
+
+  // load the programs from file (via loader)
+  programs, err := loader.Load(c.Progfile)
+  if err != nil {
+    return nil, err
+  }
+
+  k.logger.Printf("Got %d programs!\n", len(programs))
+
   k.sched = scheduler.New(c, &k.pm, programs)
 
   return k, nil
