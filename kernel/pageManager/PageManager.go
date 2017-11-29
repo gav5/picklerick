@@ -2,7 +2,6 @@ package pageManager
 
 import (
   "log"
-  "fmt"
 
   "../../util/logger"
   "../../vm/ivm"
@@ -68,16 +67,27 @@ func (pm PageManager) CachesForProcess(p *process.Process) ivm.FrameCache {
   for pn, fn := range p.RAMPageTable {
     caches[ivm.FrameNumber(pn)] = pm.virtualMachine.RAMFrameFetch(fn)
   }
+  pm.logger.Printf(
+    "returning caches for process %d => %v",
+    p.ProcessNumber, caches,
+  )
   return caches
 }
 
 // Load makes sure the given pages are in RAM.
 func (pm *PageManager) Load(p *process.Process) error {
-  // the initial claim will be the instructions and data footprint
-  // initialClaim := len(p.Program.Instructions) + p.Footprint
+  pm.logger.Printf("load process %d", p.ProcessNumber)
   initialClaim := len(p.DiskPageTable)
+  pm.logger.Printf(
+    "making initial claim of %d for process %d",
+    initialClaim, p.ProcessNumber,
+  )
   frameNums, err := pm.ramRM.Claim(initialClaim)
   if err != nil {
+    pm.logger.Printf(
+      "ERROR loading process %d: %v",
+      p.ProcessNumber, err,
+    )
     return err
   }
   // assign to the RAM page table and copy over to designated frames
@@ -91,11 +101,17 @@ func (pm *PageManager) Load(p *process.Process) error {
     frame := pm.virtualMachine.DiskFrameFetch(dfn)
     pm.virtualMachine.RAMFrameWrite(rfn, frame)
   }
+  pm.logger.Printf(
+    "RAM page table modified for process %d: %v",
+    p.ProcessNumber, p.RAMPageTable,
+  )
   return nil
 }
 
 // Save makes sure the given process's RAM is persisted to Disk.
 func (pm *PageManager) Save(p *process.Process) error {
+  pm.logger.Printf("save process %d", p.ProcessNumber)
+
   // go through each page in RAM and persist to the corresponding page on Disk
   // if that page is not on Disk yet, we will have to make one first
   for pn, rfn := range p.RAMPageTable {
@@ -104,6 +120,10 @@ func (pm *PageManager) Save(p *process.Process) error {
       // these will be claimed one at a time (it can get back to it later)
       newDfn, err := pm.diskRM.Claim(1)
       if err != nil {
+        pm.logger.Printf(
+          "ERROR making claim to disk for process %d: %v",
+          p.ProcessNumber, err,
+        )
         return err
       }
       // assign the new disk frame number to the disk page table
@@ -115,17 +135,23 @@ func (pm *PageManager) Save(p *process.Process) error {
     dfn, pnOk := p.DiskPageTable[pn]
     if !pnOk {
       // just to be safe!
-      panic(fmt.Sprintf(
+      pm.logger.Panicf(
         "tried to fetch a page number (%d) that wasn't there!", pn,
-      ))
+      )
     }
     pm.virtualMachine.DiskFrameWrite(dfn, ramFrame)
   }
+  pm.logger.Printf(
+    "process %d saved to disk; page table now %v",
+    p.ProcessNumber, p.DiskPageTable,
+  )
   return nil
 }
 
 // Unload makes sure the given process is not in RAM.
 func (pm *PageManager) Unload(p *process.Process) error {
+  pm.logger.Printf("unload process %d", p.ProcessNumber)
+
   // at some point, we're going to have to remove some page table entries
   // we're also going to need to release some frames from the resource manager
   ptLen := len(p.RAMPageTable)
@@ -146,25 +172,37 @@ func (pm *PageManager) Unload(p *process.Process) error {
   // (so it can go to some other process at some point)
   err := pm.ramRM.Release(frNumbers)
   if err != nil {
+    pm.logger.Printf(
+      "ERROR releasing frames from process %d: %v",
+      p.ProcessNumber, err,
+    )
     return err
   }
+  pm.logger.Printf(
+    "released frames from process %d: %v",
+    p.ProcessNumber, frNumbers,
+  )
 
   // remove the corresponing entries from the RAM page table
   // (this is done this way to ensure an entry wasn't missed)
   for _, pn := range pgNumbers {
     delete(p.RAMPageTable, pn)
   }
+  pm.logger.Printf(
+    "deleted pages from process %d: %v",
+    p.ProcessNumber, pgNumbers,
+  )
 
   // make sure we got all the entries!
   // if not, this should panic (becasue it's unexpected)
   if len(p.RAMPageTable) > 0 {
-    pm.logger.Printf(
-      "[Unload] %d page table entries still remain!?\n",
-      len(p.RAMPageTable),
+    pm.logger.Panicf(
+      "%d page table entries still remain after unloading process %d",
+      len(p.RAMPageTable), p.ProcessNumber,
     )
-    panic("RAM page table is not completely cleared!")
   }
 
+  pm.logger.Printf("process %d has been unloaded", p.ProcessNumber)
   return nil
 }
 
@@ -174,15 +212,19 @@ func (pm *PageManager) Reallocate(p *process.Process) error {
   err := pm.reallocate(p)
   if err != nil {
     pm.logger.Printf(
-      "[Reallocate] process %d reallocation error: %v\n",
+      "could not reallocate process %d: %v",
       p.ProcessNumber, err,
+    )
+    pm.logger.Printf(
+      "process %d added to waitlist",
+      p.ProcessNumber,
     )
     // the request cannot be granted!
     // add the process to the waitlist
     pm.waitlist = append(pm.waitlist, p)
   } else {
     pm.logger.Printf(
-      "[Reallocate] process %d reallocated: %v\n",
+      "process %d reallocated: %v",
       p.ProcessNumber, p.RAMPageTable,
     )
   }
@@ -191,19 +233,18 @@ func (pm *PageManager) Reallocate(p *process.Process) error {
 
 // HandleWaitlist ensures the items in the waitlist are handled eventually.
 func (pm *PageManager) HandleWaitlist() {
+  pm.logger.Printf("handle waitlist")
+
   completed := []int{}
   for i, p := range pm.waitlist {
     err := pm.reallocate(p)
     if err == nil {
-      pm.logger.Printf(
-        "[HandleWaitlist] process %d reallocated!\n",
-        p.ProcessNumber,
-      )
+      pm.logger.Printf("process %d reallocated", p.ProcessNumber)
       // remove from the waitlist (later)
       completed = append(completed, i)
     } else {
       pm.logger.Printf(
-        "[HandleWaitlist] process %d error: %v\n",
+        "ERROR reallocating process %d: %v",
         p.ProcessNumber, err,
       )
     }
@@ -213,22 +254,43 @@ func (pm *PageManager) HandleWaitlist() {
   // (i.e. as you remove values, the indexes shift)
   for i := len(completed)-1; i >= 0; i-- {
     index := completed[i]
+    pm.logger.Printf(
+      "process %d removed from waitlist",
+      pm.waitlist[index].ProcessNumber,
+    )
     // remove the indicated index from the waitlist
     pm.waitlist = append(pm.waitlist[:index], pm.waitlist[index+1:]...)
   }
 }
 
 func (pm *PageManager) reallocate(p *process.Process) error {
+  pm.logger.Printf("reallocate process %d", p.ProcessNumber)
+
   numFaults := len(p.State.Faults)
+  pm.logger.Printf(
+    "claiming %d frames of RAM to reallocate process %d",
+    numFaults, p.ProcessNumber,
+  )
   frameNums, err := pm.ramRM.Claim(numFaults)
   if err != nil {
+    pm.logger.Printf(
+      "ERROR claiming frames of RAM to reallocate process %d: %v",
+      p.ProcessNumber, err,
+    )
     return err
   }
   p.Footprint += numFaults
+  pm.logger.Printf(
+    "process %d footprint increased by %d to %d",
+    p.ProcessNumber, numFaults, p.Footprint,
+  )
   i := 0
   for x, v := range p.State.Faults {
     if !v {
-      pm.logger.Panic("expected true!")
+      pm.logger.Panicf(
+        "expected true in faults for process %d: %v",
+        p.ProcessNumber, p.State.Faults,
+      )
     }
     pn := page.Number(x)
     fn := ivm.FrameNumber(frameNums[i])
@@ -236,6 +298,10 @@ func (pm *PageManager) reallocate(p *process.Process) error {
     p.RAMPageTable[pn] = fn
     i++
   }
+  pm.logger.Printf(
+    "process %d RAM page table now %v",
+    p.ProcessNumber, p.RAMPageTable,
+  )
   p.State.Faults = ivm.FaultList{}
   return nil
 }

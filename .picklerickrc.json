@@ -4,5 +4,5 @@
   "sched": "fcfs",
   "qsize": 200,
   "maxcycles": 100000,
-  "quiet": true
+  "quiet": false
 }

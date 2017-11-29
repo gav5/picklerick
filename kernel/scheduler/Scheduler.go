@@ -61,6 +61,8 @@ func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Sche
 // Tick is used to signal the start of a virtual machine cycle to the kernel.
 // This sets up processes and resources before the next cycle begins.
 func (sched Scheduler) Tick() {
+  sched.logger.Printf("Tick!")
+
   // run the long-term scheduler
   sched.Long()
 }
@@ -68,11 +70,13 @@ func (sched Scheduler) Tick() {
 // Tock is used to signal the end of a virtual machine cycle to the kernel.
 // This reacts to the events that occured during the cycle.
 func (sched Scheduler) Tock() error {
+  sched.logger.Printf("Tock!")
 
   // make sure terminated processes aren't taking up space anymore
   // (otherwise, there's nothing to fill here and it just stops)
   err := sched.Clean()
   if err != nil {
+    sched.logger.Printf("ERROR in Tock: %v", err)
     return err
   }
 
@@ -83,7 +87,9 @@ func (sched Scheduler) Tock() error {
   sched.Each(func(p *process.Process) {
     if p.Status() == process.Wait {
       err := sched.pm.Reallocate(p)
-      if err == nil {
+      if err != nil {
+        sched.logger.Printf("ERROR in Tock: %v", err)
+      } else {
         p.SetStatus(process.Ready)
       }
     }
@@ -93,11 +99,13 @@ func (sched Scheduler) Tock() error {
 
 // ProcessForCore returns the appropriate process for the given core.
 func (sched Scheduler) ProcessForCore(corenum uint8) process.Process {
+
   // Look for the first process that is ready to be run
   p := sched.FindBy(func(p *process.Process) bool {
     return p.Status() == process.Ready
   })
   if p == nil {
+    sched.logger.Printf("ProcessForCore(%d) => SLEEP", corenum)
     return process.Sleep()
   }
   // make sure the process is ready to be run on the given core
@@ -105,6 +113,10 @@ func (sched Scheduler) ProcessForCore(corenum uint8) process.Process {
   // update this internally (because Short changed it)
   sched.Update(*p)
 
+  sched.logger.Printf(
+    "ProcessForCore(%d) => process %d",
+    corenum, p.ProcessNumber,
+  )
   return *p
 }
 
@@ -114,21 +126,39 @@ func (sched *Scheduler) Update(p process.Process) error {
     pX := sched.processList.base[i]
     if p.ProcessNumber == pX.ProcessNumber {
       sched.processList.base[i] = p
+      sched.logger.Printf(
+        "updated process %d",
+        p.ProcessNumber,
+      )
       return nil
     }
   }
-  return NotFoundError{}
+  err := NotFoundError{}
+  sched.logger.Printf(
+    "ERROR updating process %d: %v",
+    p.ProcessNumber, err,
+  )
+  return err
 }
 
 // Load makes sure the given process is in RAM.
 func (sched *Scheduler) Load(p *process.Process) error {
   if p.Status() != process.Ready {
     // this process is not ready to be loaded into RAM
-    return NotReadyError{}
+    err := NotReadyError{}
+    sched.logger.Printf(
+      "ERROR loading process %d: %v",
+      p.ProcessNumber, err,
+    )
+    return err
   }
   // defer to the page manager
   err := sched.pm.Load(p)
   if err != nil {
+    sched.logger.Printf(
+      "ERROR loading process %d: %v",
+      p.ProcessNumber, err,
+    )
     return err
   }
   return nil
@@ -136,20 +166,29 @@ func (sched *Scheduler) Load(p *process.Process) error {
 
 // Save makes sure the given process's RAM is persisted to Disk.
 func (sched *Scheduler) Save(p *process.Process) error {
+  sched.logger.Printf("save process %d", p.ProcessNumber)
+
   // defer to the page manager
-  return sched.pm.Save(p)
+  err := sched.pm.Save(p)
+  if err != nil {
+    sched.logger.Printf(
+      "ERROR saving process %d: %v",
+      p.ProcessNumber, err,
+    )
+  }
+  return err
 }
 
 // Unload makes sure the given process is not in RAM.
 func (sched *Scheduler) Unload(p *process.Process) error {
   sched.logger.Printf(
-    "[Unload] process %d should be unloaded",
+    "process %d should be unloaded",
     p.ProcessNumber,
   )
 
   if p.Status() != process.Terminated {
     sched.logger.Panicf(
-      "[Unload] process %d is not terminated (is %v)",
+      "process %d is not terminated (is %v)",
       p.ProcessNumber, p.Status,
     )
   }
@@ -157,12 +196,23 @@ func (sched *Scheduler) Unload(p *process.Process) error {
   // defer to the page manager
   err := sched.pm.Unload(p)
   if err != nil {
+    sched.logger.Printf(
+      "ERROR unloading process %d: %v",
+      p.ProcessNumber, err,
+    )
     return err
   }
 
   // make sure the process is now removed (for efficiency)
   // we will want to add to the completed list
-  return sched.removeProcess(p)
+  err = sched.removeProcess(p)
+  if err != nil {
+    sched.logger.Printf(
+      "ERROR unloading process %d: %v",
+      p.ProcessNumber, err,
+    )
+  }
+  return err
 }
 
 func (sched *Scheduler) removeProcess(p *process.Process) error {
@@ -170,11 +220,17 @@ func (sched *Scheduler) removeProcess(p *process.Process) error {
     return p.ProcessNumber == px.ProcessNumber
   })
   if index == -1 {
-    return NotFoundError{}
+    err := NotFoundError{}
+    sched.logger.Printf(
+      "ERROR removing process %d: %v",
+      p.ProcessNumber, err,
+    )
+    return err
   }
+
   sched.logger.Printf(
-    "[removeProcess] (before: %d) %d completed",
-    p.ProcessNumber, sched.completed.Len(),
+    "%d completed before removing process %d",
+    sched.completed.Len(), p.ProcessNumber,
   )
 
   // remove from the process list
@@ -185,9 +241,10 @@ func (sched *Scheduler) removeProcess(p *process.Process) error {
   // add to the completed list
   sched.completed.Push(*p)
   sort.Sort(sched.completed)
+
   sched.logger.Printf(
-    "[removeProcess] (after: %d) %d completed",
-    p.ProcessNumber, sched.completed.Len(),
+    "%d completed after removing process %d",
+    sched.completed.Len(), p.ProcessNumber,
   )
   return nil
 }
@@ -196,6 +253,7 @@ func (sched *Scheduler) removeProcess(p *process.Process) error {
 func (sched *Scheduler) Complete(p *process.Process) error {
   // mark is Terminated (this will get cleaned up later)
   p.SetStatus(process.Terminated)
+  sched.logger.Printf("process %d completed/terminated", p.ProcessNumber)
   return nil
 }
 
