@@ -56,6 +56,17 @@ func FrameArrayFromUint32Array(ary []uint32) []Frame {
 	return frameArray
 }
 
+func (f Frame) String() string {
+	outstr := ""
+	for faddr, val := range f {
+		if faddr%FrameDisplayColumns > 0 {
+			outstr += " | "
+		}
+		outstr += val.String()
+	}
+	return outstr
+}
+
 // Fprint prints the contents of the RAMFrame to the given writer.
 func (f Frame) Fprint(w io.Writer) error {
 	var err error
