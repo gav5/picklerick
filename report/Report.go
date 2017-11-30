@@ -19,6 +19,8 @@ func Generate(cfg config.Config, virtualMachine *vm.VM) error {
 		b reportBuilder
 	}
 	reportMakersArray := []reportMaker{
+		makeRAMDumpReport,
+		makeDiskDumpReport,
 		makeProcessTableReport,
 		makeProcessResultReports,
 	}
