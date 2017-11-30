@@ -1,58 +1,46 @@
 package process
 
 import (
-	"log"
 	"fmt"
+	"log"
 
+	"../../util/logger"
+	"../../vm/ivm"
 	"../page"
 	"../program"
-	"../../vm/ivm"
-	"../../util/logger"
 )
 
 // Process is used to represent process execution
 // also used to facilitate CPU reassignment during context switching
 type Process struct {
-
 	// CPUID is used to describe the CPU the process is being run on
 	CPUID uint8
-
 	// ProgramCounter (PC) describes where the program is at in execution
 	ProgramCounter ivm.Address
-
-	state ivm.State
-
 	// CodeSize indicates the size of the code for the given process
 	CodeSize uint8
-
 	// Registers contains the list of standard CPU registers
 	// (these are manipulated by instructions for general computational purposes)
 	Registers [ivm.NumCoreRegisters]ivm.Word
-
-	// ProcessNumber is the number assigned to the process for tracking in the process table
+	// ProcessNumber is the number assigned to the process for tracking
 	ProcessNumber uint8
-
 	// RAMPageTable is used to track all RAM pages used by the process
 	RAMPageTable page.Table
-
 	// DiskPageTable is used to track all Disk pages used by the process
 	DiskPageTable page.Table
-
 	// Priority is used for sorting purposes
 	Priority uint8
-
+	// Metrics holds all the data about the process
 	Metrics Metrics
-
+	// Program holds the original program that generated the process
 	Program program.Program
-
 	// Footprint stores the number of frames/pages required to store this process
 	Footprint int
 
-
-	status Status
-
+	state   ivm.State
+	status  Status
 	isSleep bool
-	logger *log.Logger
+	logger  *log.Logger
 }
 
 // Make makes a Process from a given program
@@ -62,33 +50,33 @@ func Make(p program.Program) Process {
 		ProgramCounter: 0x00,
 		CodeSize:       p.NumberOfWords,
 		ProcessNumber:  p.JobID,
-		Priority: 			p.PriorityNumber,
-		RAMPageTable:  	make(page.Table),
-		DiskPageTable:	make(page.Table),
-		Footprint:			4,
-		Program: 				p,
-		state:					ivm.MakeState(),
-		status:					New,
-		isSleep:				false,
-		logger: 				logger.New(fmt.Sprintf("process%02d", p.JobID)),
+		Priority:       p.PriorityNumber,
+		RAMPageTable:   make(page.Table),
+		DiskPageTable:  make(page.Table),
+		Footprint:      4,
+		Program:        p,
+		state:          ivm.MakeState(),
+		status:         New,
+		isSleep:        false,
+		logger:         logger.New(fmt.Sprintf("process%02d", p.JobID)),
 	}
 }
 
 // Sleep makes a process that tells the CPU to sleep each time.
 func Sleep() Process {
 	return Process{
-		CPUID: 0x0,
+		CPUID:          0x0,
 		ProgramCounter: 0x00,
-		CodeSize: 1,
-		ProcessNumber: 0,
-		Priority: 0,
-		RAMPageTable: make(page.Table),
-		DiskPageTable: make(page.Table),
-		Footprint: 0,
-		Program: program.Sleep(),
-		state: ivm.Sleep(),
-		status: Ready,
-		isSleep: true,
+		CodeSize:       1,
+		ProcessNumber:  0,
+		Priority:       0,
+		RAMPageTable:   make(page.Table),
+		DiskPageTable:  make(page.Table),
+		Footprint:      0,
+		Program:        program.Sleep(),
+		state:          ivm.Sleep(),
+		status:         Ready,
+		isSleep:        true,
 	}
 }
 
@@ -142,4 +130,28 @@ func MakeArray(progAry []program.Program) []Process {
 // IsSleep returns if this is a sleep process or not
 func (p Process) IsSleep() bool {
 	return p.isSleep
+}
+
+// TableHeaders describes the headers used for the table of processes.
+func TableHeaders() []string {
+	return []string{
+		"ProcessNumber",
+		"Status",
+		"Priority",
+		"Size",
+		"RAM Pages",
+		"Disk Pages",
+	}
+}
+
+// TableRow returns the corresponding row for the given process.
+func (p Process) TableRow() []string {
+	return []string{
+		fmt.Sprintf("%d", p.ProcessNumber),
+		fmt.Sprintf("%v", p.Status()),
+		fmt.Sprintf("%d", p.Priority),
+		fmt.Sprintf("%d", p.CodeSize),
+		fmt.Sprintf("%d", len(p.RAMPageTable)),
+		fmt.Sprintf("%d", len(p.DiskPageTable)),
+	}
 }

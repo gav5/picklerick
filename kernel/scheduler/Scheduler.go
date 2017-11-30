@@ -308,3 +308,8 @@ func (sched Scheduler) Find(processNumber uint8) *process.Process {
 	})
 	return p
 }
+
+// ProcessTable returns the system process table
+func (sched Scheduler) ProcessTable() []process.Process {
+	return sched.processList.base
+}

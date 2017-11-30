@@ -1,6 +1,11 @@
 package vm
 
 import (
+	"fmt"
+	"io"
+	"log"
+	"sync"
+
 	"../config"
 	"../disp"
 	"../kernel"
@@ -8,10 +13,6 @@ import (
 	"../util/logger"
 	"./core"
 	"./ivm"
-	"fmt"
-	"io"
-	"log"
-	"sync"
 )
 
 // VM is the virtual computer system.
@@ -303,4 +304,10 @@ func (vm *VM) DiskFrameWrite(frameNum ivm.FrameNumber, frame ivm.Frame) {
 
 func (vm VM) loggingPrefix() string {
 	return fmt.Sprintf("vm:%d | ", vm.Clock)
+}
+
+// ProcessTable returns the system process table
+func (vm VM) ProcessTable() []process.Process {
+	// defer to the kernel
+	return vm.osKernel.ProcessTable()
 }

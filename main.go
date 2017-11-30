@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"./config"
+	"./report"
 	"./util/logger"
 	"./vm"
 )
@@ -37,26 +38,22 @@ func main() {
 	// build the virtual machine with the given config
 	virtualMachine, err = vm.New(sharedConfig)
 	if err != nil {
-		log.Fatalf("error building virtual machine: %v", err)
+		log.Fatalf("ERROR building VM: %v", err)
 		return
 	}
 
-	// fmt.Println()
-	// virtualMachine.FprintProcessTable(os.Stdout)
-
+	// run the virtual machine
 	err = virtualMachine.Run()
 	if err != nil {
-		fmt.Printf("\nError Report:\n%v\n", err)
+		log.Fatalf("ERROR running VM: %v", err)
 	}
 
-	// fmt.Println()
-	// _ = virtualMachine.FprintProcessTable(os.Stdout)
+	// build the reports and save to disk
+	err = report.Generate(sharedConfig, virtualMachine)
+	if err != nil {
+		log.Fatalf("ERROR generating reports: %v", err)
+	}
 
-	// fmt.Print("\nRAM Dump:\n")
-	// virtualMachine.RAM.Print()
-	// fmt.Print("\n")
-
-	// fmt.Print("\nDisk Dump:\n")
-	// _ = virtualMachine.Disk.Print()
-	// fmt.Print("\n")
+	// let the user know this finished successfully
+	fmt.Println("\ndone!")
 }
