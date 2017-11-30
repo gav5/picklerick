@@ -63,8 +63,9 @@ func saveReportFile(r reportBase, b reportBuilder) (string, error) {
 		return fullPathForReportFile(r, b), err
 	}
 
-	// get the file to write to
+	// get the file to write to (and make sure to close it before this exits)
 	f, p, err := fileForReport(r, b)
+	defer f.Close()
 	if err != nil {
 		return p, err
 	}
