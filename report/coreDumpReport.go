@@ -30,7 +30,7 @@ func (coreDumpReport) Namespace() string {
 
 func (r coreDumpReport) Name() string {
 	return fmt.Sprintf(
-		"snap%d-%04x.c%d-%02d.dump",
+		"snap%02d-%04x.c%d-%d.dump",
 		r.snapshot.Process.Program.JobID,
 		uint32(r.snapshot.Process.State().ProgramCounter),
 		r.coreNum, r.index,
@@ -39,7 +39,9 @@ func (r coreDumpReport) Name() string {
 
 func (r coreDumpReport) Title() string {
 	return fmt.Sprintf(
-		"Virtual Machine Core Dump (Core %d, Snapshot %d)",
+		"Virtual Machine Core Dump (%02d@%04x; Core %d, Snapshot %d)",
+		r.snapshot.Process.Program.JobID,
+		uint32(r.snapshot.Process.State().ProgramCounter),
 		r.coreNum, r.index,
 	)
 }
