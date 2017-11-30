@@ -1,11 +1,17 @@
 package scheduler
 
-import "../process"
+import (
+	"../../vm/ivm"
+	"../process"
+)
 
 // Clean ensures spaces in RAM that are no longer used are given back.
 // (this, of course, means terminated processes)
 func (sched *Scheduler) Clean() error {
-	sched.logger.Printf("clean RAM")
+	sched.logger.Printf(
+		"[Clean] %d items in the process unload queue (RAM at %d/%d)",
+		sched.processUnloadQueue.Len(), sched.pm.AvailableRAM(), ivm.RAMNumFrames,
+	)
 
 	// unload each process in the unload queue
 	for sched.processUnloadQueue.Len() > 0 {
@@ -15,16 +21,16 @@ func (sched *Scheduler) Clean() error {
 
 		if p == nil {
 			sched.logger.Panicf(
-				"process %d not found in process list (it is in the unload queue)",
+				"[Clean] process %d in the process list (it is in the unload queue)",
 				pNum,
 			)
 		} else if p.Status() != process.Terminated {
 			sched.logger.Panicf(
-				"process %d is not marked as terminated (it is in the unload queue)",
+				"[Clean] process %d not marked as terminated (it is in the unload queue)",
 				pNum,
 			)
 		} else {
-			sched.logger.Printf("going to clean process %d", pNum)
+			sched.logger.Printf("[Clean] going to clean process %d", pNum)
 		}
 
 		// make sure to save the process (so progress isn't lost)
@@ -35,7 +41,7 @@ func (sched *Scheduler) Clean() error {
 			sched.processUnloadQueue.Push(pNum)
 
 			sched.logger.Printf(
-				"ERROR saving process %d during clean procedure: %v",
+				"[Clean] ERROR saving process %d: %v",
 				pNum, err,
 			)
 			return err
@@ -50,14 +56,14 @@ func (sched *Scheduler) Clean() error {
 			sched.processUnloadQueue.Push(pNum)
 
 			sched.logger.Printf(
-				"ERROR unloading process %d during clean procedure: %v",
+				"[Clean] ERROR unloading process %d: %v",
 				pNum, err,
 			)
 			return err
 		}
 
 		sched.logger.Printf(
-			"process %d has been saved and unloaded successfully!",
+			"[Clean] process %d has been cleaned",
 			pNum,
 		)
 	}

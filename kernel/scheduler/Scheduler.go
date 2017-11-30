@@ -209,6 +209,10 @@ func (sched *Scheduler) Unload(p *process.Process) error {
 func (sched *Scheduler) Complete(p *process.Process) error {
 	// mark is Terminated (this will get cleaned up later)
 	p.SetStatus(process.Terminated)
+	// add the process number to the process unload queue
+	// this ensures the leftover memory doesn't just sit around forever
+	sched.processUnloadQueue.Push(p.ProcessNumber)
+
 	sched.logger.Printf("process %d completed/terminated", p.ProcessNumber)
 	return nil
 }
