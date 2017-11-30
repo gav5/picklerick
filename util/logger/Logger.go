@@ -68,6 +68,17 @@ func New(modulename string) *log.Logger {
 	)
 }
 
+// Dummy returns a fake logger for things like testing.
+func Dummy() *log.Logger {
+	return log.New(fakeWriter{}, "", log.Lshortfile)
+}
+
+type fakeWriter struct{}
+
+func (fakeWriter) Write(p []byte) (n int, err error) {
+	return 0, nil
+}
+
 // Init sets up all the utilities.
 func Init(c config.Config) error {
 	var err error

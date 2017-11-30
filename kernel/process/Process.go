@@ -77,6 +77,7 @@ func Sleep() Process {
 		state:          ivm.Sleep(),
 		status:         Ready,
 		isSleep:        true,
+		logger:         logger.Dummy(),
 	}
 }
 

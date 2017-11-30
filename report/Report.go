@@ -41,5 +41,12 @@ func Generate(cfg config.Config, virtualMachine *vm.VM) error {
 			}
 		}
 	}
+
+	// clean the directory (so stale files aren't there)
+	err := cleanOutdir()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

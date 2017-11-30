@@ -25,11 +25,16 @@ func makeCoreDumpReports(v *vm.VM) ([]reportBase, reportBuilder, error) {
 }
 
 func (coreDumpReport) Namespace() string {
-	return "vm"
+	return "snapshots"
 }
 
 func (r coreDumpReport) Name() string {
-	return fmt.Sprintf("core%d.snapshot%d.dump", r.coreNum, r.index)
+	return fmt.Sprintf(
+		"snap%d-%04x.c%d-%02d.dump",
+		r.snapshot.Process.Program.JobID,
+		uint32(r.snapshot.Process.State().ProgramCounter),
+		r.coreNum, r.index,
+	)
 }
 
 func (r coreDumpReport) Title() string {
@@ -66,20 +71,20 @@ func (r coreDumpReport) Fprint(w io.Writer) error {
 	}
 	if nextState.Error != nil {
 		_, err = fmt.Fprintf(
-			w, "\n[ERROR: %v]",
+			w, "\nERROR: %v",
 			nextState.Error,
 		)
 		if err != nil {
 			return err
 		}
 	} else if nextState.Halt {
-		_, err = fmt.Fprint(w, "\n[HALT]")
+		_, err = fmt.Fprint(w, "\nHALT")
 		if err != nil {
 			return err
 		}
 	} else if len(nextState.Faults) > 0 {
 		_, err = fmt.Fprintf(
-			w, "\n[FAULTS: %v]",
+			w, "\nFAULTS at %v",
 			nextState.Faults,
 		)
 		if err != nil {
@@ -87,16 +92,16 @@ func (r coreDumpReport) Fprint(w io.Writer) error {
 		}
 	} else if nextState.ProgramCounter != (currentState.ProgramCounter + 4) {
 		_, err = fmt.Fprintf(
-			w, "\n[JUMP to 0x%04X]",
-			nextState.ProgramCounter,
+			w, "\nJUMP to 0x%04X",
+			uint32(nextState.ProgramCounter),
 		)
 		if err != nil {
 			return err
 		}
 	} else {
 		_, err = fmt.Fprintf(
-			w, "\n[CONTINUE to 0x%04X]",
-			nextState.ProgramCounter,
+			w, "\nCONTINUE to 0x%04X",
+			uint32(nextState.ProgramCounter),
 		)
 		if err != nil {
 			return err

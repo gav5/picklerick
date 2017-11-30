@@ -22,6 +22,7 @@ type VM struct {
 	Disk      Disk
 	osKernel  *kernel.Kernel
 	maxCycles uint
+	dumpAt    dumpPointsList
 	logger    *log.Logger
 }
 
@@ -38,6 +39,11 @@ func New(c config.Config) (*VM, error) {
 	// setup and configure the kernel
 	var err error
 	vm.osKernel, err = kernel.New(vm, c)
+	if err != nil {
+		return vm, err
+	}
+	// setup and configure the dump dumpPoints
+	vm.dumpAt, err = makeDumpPoints(c.DumpAt)
 	if err != nil {
 		return vm, err
 	}
@@ -175,6 +181,7 @@ func (vm VM) handleCore(c *core.Core) error {
 			"process %d threw an ERROR: %v\n",
 			c.Process.ProcessNumber, c.Next.Error,
 		)
+		// every error should get a snapshot regardless
 		c.TakeSnapshot()
 
 		// apply the next state to the current one
@@ -195,12 +202,16 @@ func (vm VM) handleCore(c *core.Core) error {
 		return nil
 	}
 
+	// check if we should take a snapshot of the given state
+	if vm.dumpAt.ShouldDump(c.Process) {
+		c.TakeSnapshot()
+	}
+
 	if c.Next.Halt {
 		vm.logger.Printf(
 			"process %d completed via HALT",
 			c.Process.ProcessNumber,
 		)
-		c.TakeSnapshot()
 		// the core said to halt, so the process is now done!
 
 		// apply the next state to the current one

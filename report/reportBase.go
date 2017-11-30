@@ -76,5 +76,60 @@ func saveReportFile(r reportBase, b reportBuilder) (string, error) {
 		return p, err
 	}
 
+	// since this succeeded, add to the ignore list
+	// (items not on this list will be removed)
+	ignoreList = append(ignoreList, p)
+
 	return p, nil
+}
+
+var ignoreList = []string{}
+
+func cleanOutdir() error {
+	return cleanDir(sharedConfig.Outdir)
+}
+
+func cleanDir(p string) error {
+
+	// open the directory
+	dirf, err := os.Open(p)
+	if err != nil {
+		return err
+	}
+	defer dirf.Close()
+
+	// read the contents of the directory
+	dirinfo, err := dirf.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	// go through the contents of the directory
+	for _, inf := range dirinfo {
+		fname := path.Join(p, inf.Name())
+		if inf.IsDir() {
+			// recursively call on this name joined to the original
+			err := cleanDir(fname)
+			if err != nil {
+				return err
+			}
+		} else if shouldRemove(fname) {
+			// this should be removed from the filesystem
+			// (becuase it's not on the ignore list)
+			err := os.Remove(fname)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func shouldRemove(p string) bool {
+	for _, ip := range ignoreList {
+		if ip == p {
+			return false
+		}
+	}
+	return true
 }

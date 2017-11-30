@@ -4,5 +4,6 @@
   "sched": "fcfs",
   "qsize": 200,
   "maxcycles": 10000,
-  "quiet": true
+  "quiet": true,
+  "dump_at": ""
 }
