@@ -150,7 +150,7 @@ func (s State) FprintRegisters(w io.Writer) error {
 				return err
 			}
 		}
-		fmt.Fprintf(w, "[%X: %v]", i, regVal)
+		fmt.Fprintf(w, "[R%02d: %v]", i, regVal)
 	}
 	return nil
 }

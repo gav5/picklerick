@@ -60,7 +60,7 @@ func (fc FrameCache) Fprint(w io.Writer) error {
 	slice := fc.Slice()
 	var err error
 	for _, fn := range slice {
-		_, err = fmt.Fprintf(w, "\n[%02X: %v]", int(fn), fc[fn])
+		_, err = fmt.Fprintf(w, "\n[P%02d: %v]", int(fn), fc[fn])
 		if err != nil {
 			return err
 		}

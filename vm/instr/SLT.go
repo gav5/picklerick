@@ -25,7 +25,7 @@ func (i SLT) Execute(ip ivm.InstructionProxy) {
 
 // Assembly returns the representation in assembly language
 func (i SLT) Assembly() string {
-	return fmt.Sprintf("SLT %s %s %s", i.args.Destination.ASM(), i.args.Source1.ASM(), i.args.Source2.ASM())
+	return fmt.Sprintf("SLT %s", i.args.ASM())
 }
 
 // MakeSLT makes an SLT instruction for the given args
