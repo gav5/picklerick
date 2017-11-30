@@ -3,28 +3,30 @@ package core
 import (
 	"fmt"
 	"log"
-	"../ivm"
-	"../decoder"
-	"../../util/logger"
+
 	"../../kernel/process"
+	"../../util/logger"
+	"../decoder"
+	"../ivm"
 )
 
 // Core describes a CPU Core in the virtual machine.
 type Core struct {
-	CoreNum	uint8
-	Process process.Process
-	Next ivm.State
-	logger *log.Logger
+	CoreNum   uint8
+	Process   process.Process
+	Next      ivm.State
+	logger    *log.Logger
+	snapshots []Snapshot
 }
 
 // Make builds a new core.
 func Make(coreNum uint8) Core {
 	return Core{
-		CoreNum: coreNum,
-		Process: process.Sleep(), // <- obviously this is a bad assumption
-		Next: ivm.MakeState(),
-		logger: logger.New(fmt.Sprintf("core%d", coreNum)),
-
+		CoreNum:   coreNum,
+		Process:   process.Sleep(), // <- obviously this is a bad assumption
+		Next:      ivm.MakeState(),
+		logger:    logger.New(fmt.Sprintf("core%d", coreNum)),
+		snapshots: []Snapshot{},
 	}
 }
 
@@ -33,7 +35,7 @@ func Make(coreNum uint8) Core {
 func MakeArray() [ivm.NumCores]Core {
 	cores := [ivm.NumCores]Core{}
 	for i := range cores {
-		cores[i] = Make(uint8(i+1))
+		cores[i] = Make(uint8(i + 1))
 	}
 	return cores
 }
@@ -49,7 +51,6 @@ func (c *Core) Call() {
 		c.Next.Error = err
 		return
 	}
-
 
 	// execute the current instruction
 	// (passing in the next state of the system)

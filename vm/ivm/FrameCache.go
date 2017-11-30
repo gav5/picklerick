@@ -40,21 +40,41 @@ func (fc FrameCache) String() string {
 
 // Print prints the contents of the FrameCache to Stdout
 func (fc FrameCache) Print() error {
-	return fc.Fprint(os.Stdout)
+	slice := fc.Slice()
+	for i, fn := range slice {
+		fr := fc[fn]
+		fmt.Printf("[%02X: ", int(fn))
+		fr.Fprint(os.Stdout)
+		fmt.Print("]")
+		if i%2 == 1 {
+			fmt.Print("\n")
+		} else {
+			fmt.Print("  ")
+		}
+	}
+	return nil
 }
 
 // Fprint prints the contents of the FrameCache to the given writer.
 func (fc FrameCache) Fprint(w io.Writer) error {
 	slice := fc.Slice()
-	for i, fn := range slice {
+	var err error
+	for _, fn := range slice {
 		fr := fc[fn]
-		fmt.Fprintf(w, "[%02X: ", int(fn))
-		fr.Fprint(w)
-		fmt.Fprint(w, "]")
-		if i%2 == 1 {
-			fmt.Fprint(w, "\n")
-		} else {
-			fmt.Fprint(w, "  ")
+
+		_, err = fmt.Fprintf(w, "\n[%02X: ", int(fn))
+		if err != nil {
+			return err
+		}
+
+		err = fr.Fprint(w)
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Print("]")
+		if err != nil {
+			return err
 		}
 	}
 	return nil

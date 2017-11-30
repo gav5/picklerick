@@ -175,6 +175,7 @@ func (vm VM) handleCore(c *core.Core) error {
 			"process %d threw an ERROR: %v\n",
 			c.Process.ProcessNumber, c.Next.Error,
 		)
+		c.TakeSnapshot()
 
 		// apply the next state to the current one
 		// (and make sure to persist)
@@ -199,6 +200,7 @@ func (vm VM) handleCore(c *core.Core) error {
 			"process %d completed via HALT",
 			c.Process.ProcessNumber,
 		)
+		c.TakeSnapshot()
 		// the core said to halt, so the process is now done!
 
 		// apply the next state to the current one

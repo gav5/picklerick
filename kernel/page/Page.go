@@ -39,6 +39,15 @@ func (pt Table) PageNumbers() []Number {
 	return outary
 }
 
+// Copy returns a duplicate table.
+func (pt Table) Copy() Table {
+	newPT := make(Table)
+	for pn, fn := range pt {
+		newPT[pn] = fn
+	}
+	return newPT
+}
+
 // Pair retuns the paged address pair for the given address
 func Pair(addr ivm.Address) (Number, int) {
 	pageNumber, index := addr.FramePair()

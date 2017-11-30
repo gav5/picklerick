@@ -80,6 +80,25 @@ func Sleep() Process {
 	}
 }
 
+// Copy produces a duplicate process that is the same as the given one.
+func (p Process) Copy() Process {
+	return Process{
+		CPUID:          p.CPUID,
+		ProgramCounter: p.ProgramCounter,
+		CodeSize:       p.CodeSize,
+		ProcessNumber:  p.ProcessNumber,
+		Priority:       p.Priority,
+		RAMPageTable:   p.RAMPageTable.Copy(),
+		DiskPageTable:  p.DiskPageTable.Copy(),
+		Footprint:      p.Footprint,
+		Program:        p.Program.Copy(),
+		state:          p.state,
+		status:         p.status,
+		isSleep:        p.isSleep,
+		logger:         p.logger,
+	}
+}
+
 // State contains the operational state of the CPU
 func (p Process) State() ivm.State {
 	return p.state
