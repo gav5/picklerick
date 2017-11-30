@@ -119,8 +119,8 @@ func (p *Process) SetStatus(val Status) {
 }
 
 // InputBufferOffset returns the offset to use to get the input buffer.
-func (p Process) InputBufferOffset() uint8 {
-	return p.Program.NumberOfWords + 1
+func (p Process) InputBufferOffset() int {
+	return int(p.Program.NumberOfWords + 1)
 }
 
 // InputBufferRange returns the range of addresses used for the input buffer.
@@ -131,58 +131,78 @@ func (p Process) InputBufferRange() (ivm.Address, ivm.Address) {
 }
 
 // InputBuffer returns the input section of the process.
-func (p Process) InputBuffer() []ivm.Word {
-	buf := make([]ivm.Word, p.Program.InputBufferSize)
-	offset := p.InputBufferOffset()
-	for i := range buf {
-		addr := ivm.Address(offset+uint8(i)) * 4
-		buf[i] = p.state.Caches.AddressFetchWord(addr)
-	}
-	return buf
+// This is for reporting use only (use caches for program execution)
+// This feeds from disk, so it will only work after the whole system is complete
+func (p Process) InputBuffer(v ivm.IVM) []ivm.Word {
+	return p.fetchFromResultBuffer(
+		p.InputBufferOffset(),
+		p.Program.InputBufferSize,
+		v,
+	)
 }
 
 // TempBufferOffset returns the offset to use to get the temp buffer.
-func (p Process) TempBufferOffset() uint8 {
-	return p.Program.NumberOfWords + p.Program.InputBufferSize + 1
+func (p Process) TempBufferOffset() int {
+	return int(p.Program.NumberOfWords + p.Program.InputBufferSize + 1)
 }
 
 // TempBufferRange returns the range of addresses used for the temp buffer.
 func (p Process) TempBufferRange() (ivm.Address, ivm.Address) {
-	offset := p.TempBufferOffset()
-	addr := ivm.Address(offset) * 4
-	return addr, addr + ivm.Address((p.Program.TempBufferSize-1)*4)
+	return p.resultBufferRange(p.TempBufferOffset(), p.Program.TempBufferSize)
 }
 
 // TempBuffer returns the temp section of the process.
-func (p Process) TempBuffer() []ivm.Word {
-	buf := make([]ivm.Word, p.Program.TempBufferSize)
-	offset := p.TempBufferOffset()
-	for i := range buf {
-		addr := ivm.Address(offset+uint8(i)) * 4
-		buf[i] = p.state.Caches.AddressFetchWord(addr)
-	}
-	return buf
+// This is for reporting use only (use caches for program execution)
+func (p Process) TempBuffer(v ivm.IVM) []ivm.Word {
+	return p.fetchFromResultBuffer(
+		p.TempBufferOffset(),
+		p.Program.TempBufferSize,
+		v,
+	)
 }
 
 // OutputBufferOffset returns the offset to use to get the output buffer.
-func (p Process) OutputBufferOffset() uint8 {
-	return p.Program.NumberOfWords + p.Program.InputBufferSize + p.Program.TempBufferSize + 1
+func (p Process) OutputBufferOffset() int {
+	return int(p.Program.NumberOfWords + p.Program.InputBufferSize + p.Program.TempBufferSize + 1)
 }
 
 // OutputBufferRange returns the range of addresses used for the output buffer.
 func (p Process) OutputBufferRange() (ivm.Address, ivm.Address) {
-	offset := p.OutputBufferOffset()
-	addr := ivm.Address(offset) * 4
-	return addr, addr + ivm.Address((p.Program.OutputBufferSize-1)*4)
+	return p.resultBufferRange(
+		p.OutputBufferOffset(),
+		p.Program.OutputBufferSize,
+	)
 }
 
 // OutputBuffer returns the output section of the process.
-func (p Process) OutputBuffer() []ivm.Word {
-	buf := make([]ivm.Word, p.Program.OutputBufferSize)
-	offset := p.OutputBufferOffset()
+// This is for reporting use only (use caches for program execution)
+func (p Process) OutputBuffer(v ivm.IVM) []ivm.Word {
+	return p.fetchFromResultBuffer(
+		p.OutputBufferOffset(),
+		p.Program.OutputBufferSize,
+		v,
+	)
+}
+
+func (p Process) resultBufferRange(offset int, size uint8) (ivm.Address, ivm.Address) {
+	addr := ivm.AddressForIndex(offset)
+	return addr, addr + ivm.AddressForIndex(int(size)-1)
+}
+
+func (p Process) fetchFromResultBuffer(offset int, size uint8, v ivm.IVM) []ivm.Word {
+	buf := make([]ivm.Word, size)
+	dataOffset := offset - int(p.Program.NumberOfWords) - 1
 	for i := range buf {
-		addr := ivm.Address(offset+uint8(i)) * 4
-		buf[i] = p.state.Caches.AddressFetchWord(addr)
+		addr := ivm.AddressForIndex(offset + i)
+		frameNumber, frameIndex, ok := p.DiskPageTable.PairForAddressSoft(addr)
+		if ok {
+			// get the value from disk (because it's been changed by the program)
+			frame := v.DiskFrameFetch(frameNumber)
+			buf[i] = frame[frameIndex]
+		} else {
+			// get the value from the original program (because it's never been touched by the program)
+			buf[i] = ivm.Word(p.Program.DataBlock[dataOffset+i])
+		}
 	}
 	return buf
 }

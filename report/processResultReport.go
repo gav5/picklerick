@@ -11,6 +11,7 @@ import (
 
 type processResultReport struct {
 	p process.Process
+	v *vm.VM
 }
 
 func makeProcessResultReports(v *vm.VM) ([]reportBase, reportBuilder, error) {
@@ -18,7 +19,7 @@ func makeProcessResultReports(v *vm.VM) ([]reportBase, reportBuilder, error) {
 	pTableLen := len(processTable)
 	reports := make([]reportBase, pTableLen)
 	for i, p := range processTable {
-		reports[pTableLen-i-1] = processResultReport{p}
+		reports[pTableLen-i-1] = processResultReport{p, v}
 	}
 	return reports, txtReportBuilder{}, nil
 }
@@ -53,19 +54,25 @@ func (r processResultReport) Fprint(w io.Writer) error {
 	fprintHeader(w, fmt.Sprintf(
 		"Input Buffer [0x%02X - 0x%02X]", uint32(inBufStart), uint32(inBufEnd),
 	))
-	fprintWords(w, r.p.InputBuffer())
+	fprintWords(w, r.p.InputBuffer(r.v))
 
 	tempBufStart, tempBufEnd := r.p.TempBufferRange()
 	fprintHeader(w, fmt.Sprintf(
 		"Temp Buffer [0x%02X - 0x%02X]", uint32(tempBufStart), uint32(tempBufEnd),
 	))
-	fprintWords(w, r.p.TempBuffer())
+	fprintWords(w, r.p.TempBuffer(r.v))
 
 	outBufStart, outBufEnd := r.p.OutputBufferRange()
 	fprintHeader(w, fmt.Sprintf(
 		"Output Buffer [0x%02X - 0x%02X]", uint32(outBufStart), uint32(outBufEnd),
 	))
-	fprintWords(w, r.p.OutputBuffer())
+	fprintWords(w, r.p.OutputBuffer(r.v))
+
+	fprintHeader(w, "RAM Page Table")
+	r.p.RAMPageTable.Fprint(w)
+
+	fprintHeader(w, "Disk Page Table")
+	r.p.DiskPageTable.Fprint(w)
 
 	return nil
 }

@@ -2,6 +2,8 @@ package page
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"sort"
 
 	"../../vm/ivm"
@@ -22,10 +24,7 @@ func (n Number) String() string {
 
 // TranslateAddress translates a paged address into a raw frame Address.
 func (pt Table) TranslateAddress(addr ivm.Address) ivm.Address {
-	pageNumber := Number(addr / ivm.FrameSize)
-	frameAddress := addr % ivm.FrameSize
-	frameNumber := pt[pageNumber]
-	return ivm.Address(frameNumber*ivm.FrameSize) + frameAddress
+	return ivm.AddressForFramePair(pt.PairForAddress(addr))
 }
 
 // PageNumbers returns the page numbers in the page table.
@@ -38,6 +37,26 @@ func (pt Table) PageNumbers() []Number {
 	}
 	sort.Sort(numbersArray(outary))
 	return outary
+}
+
+// Pair retuns the paged address pair for the given address
+func Pair(addr ivm.Address) (Number, int) {
+	pageNumber, index := addr.FramePair()
+	return Number(pageNumber), index
+}
+
+// PairForAddress returns the frame pair for the given address.
+func (pt Table) PairForAddress(addr ivm.Address) (ivm.FrameNumber, int) {
+	pageNumber, index := Pair(addr)
+	frameNumber := pt.FrameNumberForPageNumber(pageNumber)
+	return frameNumber, index
+}
+
+// PairForAddressSoft is a little more forgiving than PairForAddress
+func (pt Table) PairForAddressSoft(addr ivm.Address) (ivm.FrameNumber, int, bool) {
+	pageNumber, index := Pair(addr)
+	frameNumber, ok := pt.SoftFrameNumberForPageNumber(pageNumber)
+	return frameNumber, index, ok
 }
 
 // Pairs returns the page table as parallel arrays.
@@ -78,22 +97,60 @@ func (pt Table) UsedFrameNumbers() []ivm.FrameNumber {
 
 // FrameNumberForPageNumber returns the frame number for the given page number.
 func (pt Table) FrameNumberForPageNumber(pn Number) ivm.FrameNumber {
-	return pt[pn]
+	fn, ok := pt.SoftFrameNumberForPageNumber(pn)
+	if !ok {
+		log.Panicf(
+			"cannot supply a frame number for page %d (page table %v)",
+			pn, pt,
+		)
+	}
+	return fn
+}
+
+// SoftFrameNumberForPageNumber is a little more forgiving than FrameNumberForPageNumber.
+func (pt Table) SoftFrameNumberForPageNumber(pn Number) (ivm.FrameNumber, bool) {
+	fn, ok := pt[pn]
+	return fn, ok
 }
 
 func (pt Table) String() string {
 	outval := ""
 	pnums := pt.PageNumbers()
-	i := 0
-	for _, pn := range pnums {
+	for i, pn := range pnums {
 		fn := pt[pn]
 		if i > 0 {
 			outval += " "
 		}
 		outval += fmt.Sprintf("%v:%v", pn, fn)
-		i++
 	}
 	return outval
+}
+
+const fprintColSize = 6
+
+// Fprint prints to the given writer
+func (pt Table) Fprint(w io.Writer) error {
+	var err error
+	pnums := pt.PageNumbers()
+	for i, pn := range pnums {
+		fn := pt[pn]
+		if i%fprintColSize > 0 {
+			_, err = fmt.Fprint(w, "  ")
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err = fmt.Fprint(w, "\n")
+			if err != nil {
+				return err
+			}
+		}
+		_, err = fmt.Fprintf(w, "%v:%v", pn, fn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ArrayFromFrameArray returns a list of pages for a given list of frames.

@@ -57,9 +57,9 @@ func FrameArrayFromUint32Array(ary []uint32) []Frame {
 }
 
 // Fprint prints the contents of the RAMFrame to the given writer.
-func (frame Frame) Fprint(w io.Writer) error {
+func (f Frame) Fprint(w io.Writer) error {
 	var err error
-	for faddr, val := range frame {
+	for faddr, val := range f {
 		switch faddr % FrameDisplayColumns {
 		case 0:
 			if _, err = fmt.Fprintf(w, "%v", val); err != nil {
