@@ -39,10 +39,6 @@ func (r processResultReport) Title() string {
 func (r processResultReport) Fprint(w io.Writer) error {
 	var err error
 
-	err = fprintProperty(w, "CodeSize", r.p.ProcessNumber)
-	if err != nil {
-		return err
-	}
 	err = fprintProperty(w, "Priority", r.p.Priority)
 	if err != nil {
 		return err
