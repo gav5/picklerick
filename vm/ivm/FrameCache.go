@@ -45,9 +45,8 @@ func (fc FrameCache) Print() error {
 
 // Fprint prints the contents of the FrameCache to the given writer.
 func (fc FrameCache) Fprint(w io.Writer) error {
-	i := 0
 	slice := fc.Slice()
-	for _, fn := range slice {
+	for i, fn := range slice {
 		fr := fc[fn]
 		fmt.Fprintf(w, "[%02X: ", int(fn))
 		fr.Fprint(w)
@@ -57,7 +56,6 @@ func (fc FrameCache) Fprint(w io.Writer) error {
 		} else {
 			fmt.Fprint(w, "  ")
 		}
-		i++
 	}
 	return nil
 }
