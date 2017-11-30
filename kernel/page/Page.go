@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 
-	"../../prog"
 	"../../vm/ivm"
 )
 
@@ -26,7 +25,7 @@ func (pt Table) TranslateAddress(addr ivm.Address) ivm.Address {
 	pageNumber := Number(addr / ivm.FrameSize)
 	frameAddress := addr % ivm.FrameSize
 	frameNumber := pt[pageNumber]
-	return ivm.Address(frameNumber * ivm.FrameSize) + frameAddress
+	return ivm.Address(frameNumber*ivm.FrameSize) + frameAddress
 }
 
 // PageNumbers returns the page numbers in the page table.
@@ -47,8 +46,8 @@ func (pt Table) Pairs() ([]Number, []ivm.FrameNumber) {
 	pgNumbers := make([]Number, ptLen)
 	frNumbers := make([]ivm.FrameNumber, ptLen)
 	for pn, fn := range pt {
-		pgNumbers[ptLen - 1] = pn
-		frNumbers[ptLen - 1] = fn
+		pgNumbers[ptLen-1] = pn
+		frNumbers[ptLen-1] = fn
 		ptLen--
 	}
 	return pgNumbers, frNumbers
@@ -114,11 +113,4 @@ func ArrayFromWordArray(ary []ivm.Word) []Page {
 // ArrayFromUint32Array returns a list of pages for the given list of uint32's.
 func ArrayFromUint32Array(ary []uint32) []Page {
 	return ArrayFromFrameArray(ivm.FrameArrayFromUint32Array(ary))
-}
-
-// ArrayFromProgram returns a list of pages for the given program.
-func ArrayFromProgram(program prog.Program) []Page {
-	// get the words for the given program (uint32 array)
-	// organize those words (uint32's) into pages
-	return ArrayFromUint32Array(program.GetWords())
 }

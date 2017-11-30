@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"../config"
-	"../disp"
 	"../kernel"
 	"../kernel/process"
 	"../util/logger"
@@ -22,22 +21,17 @@ type VM struct {
 	RAM       RAM
 	Disk      Disk
 	osKernel  *kernel.Kernel
-	reporter  disp.ProgressReporter
-	receiver  disp.ProgressReceiver
 	maxCycles uint
 	logger    *log.Logger
 }
 
 // New makes a new virtual machine.
 func New(c config.Config) (*VM, error) {
-	progress := make(chan disp.Progress)
 	vm := &VM{
 		Clock:     0x00000000,
 		Cores:     core.MakeArray(),
 		RAM:       MakeRAM(),
 		Disk:      Disk{},
-		reporter:  disp.ProgressReporter(progress),
-		receiver:  disp.ProgressReceiver(progress),
 		maxCycles: c.MaxCycles,
 		logger:    logger.New("vm"),
 	}
