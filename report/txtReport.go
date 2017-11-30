@@ -3,6 +3,8 @@ package report
 import (
 	"fmt"
 	"io"
+
+	"../vm/ivm"
 )
 
 // txtReport describes a report in plain text
@@ -57,4 +59,25 @@ func fprintHeader(w io.Writer, headerTitle string) error {
 func fprintProperty(w io.Writer, pName string, pVal interface{}) error {
 	_, err := fmt.Fprintf(w, "\n%s: %v", pName, pVal)
 	return err
+}
+
+func fprintWords(w io.Writer, wordsArray []ivm.Word) error {
+	for i, word := range wordsArray {
+		if i%4 > 0 {
+			_, err := fmt.Fprint(w, "  ")
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err := fmt.Fprint(w, "\n")
+			if err != nil {
+				return err
+			}
+		}
+		_, err := fmt.Fprintf(w, "0x%08X", uint32(word))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

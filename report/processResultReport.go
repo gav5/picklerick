@@ -49,5 +49,23 @@ func (r processResultReport) Fprint(w io.Writer) error {
 		fmt.Fprintf(w, "\n%04X | %08X | %s", i*4, iRAW, iDecoded.Assembly())
 	}
 
+	inBufStart, inBufEnd := r.p.InputBufferRange()
+	fprintHeader(w, fmt.Sprintf(
+		"Input Buffer [0x%02X - 0x%02X]", uint32(inBufStart), uint32(inBufEnd),
+	))
+	fprintWords(w, r.p.InputBuffer())
+
+	tempBufStart, tempBufEnd := r.p.TempBufferRange()
+	fprintHeader(w, fmt.Sprintf(
+		"Temp Buffer [0x%02X - 0x%02X]", uint32(tempBufStart), uint32(tempBufEnd),
+	))
+	fprintWords(w, r.p.TempBuffer())
+
+	outBufStart, outBufEnd := r.p.OutputBufferRange()
+	fprintHeader(w, fmt.Sprintf(
+		"Output Buffer [0x%02X - 0x%02X]", uint32(outBufStart), uint32(outBufEnd),
+	))
+	fprintWords(w, r.p.OutputBuffer())
+
 	return nil
 }
