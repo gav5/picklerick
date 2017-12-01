@@ -50,6 +50,7 @@ func Make(p program.Program) Process {
 		Priority:      p.PriorityNumber,
 		RAMPageTable:  make(page.Table),
 		DiskPageTable: make(page.Table),
+		Metrics:       MakeMetrics(),
 		Footprint:     4,
 		Program:       p,
 		state:         ivm.MakeState(),
@@ -68,6 +69,7 @@ func Mock(p program.Program) Process {
 		Priority:      p.PriorityNumber,
 		RAMPageTable:  make(page.Table),
 		DiskPageTable: make(page.Table),
+		Metrics:       MakeMetrics(),
 		Footprint:     4,
 		Program:       p,
 		state: ivm.State{
@@ -153,8 +155,8 @@ func (p *Process) SetStatus(val Status) {
 		)
 	}
 	old := p.status
-	(*p).Metrics.ReactToStatus(p.status, val)
 	(*p).status = val
+	(*p).Metrics.ReactToStatus(p.status, val)
 	p.logger.Printf("status now %v (was %v)", p.status, old)
 }
 
@@ -277,6 +279,8 @@ func TableHeaders() []string {
 		"Size",
 		"RAM Pages",
 		"Disk Pages",
+		"Completion Time (ns)",
+		"Wait Time (ns)",
 	}
 }
 
@@ -289,5 +293,14 @@ func (p Process) TableRow() []string {
 		fmt.Sprintf("%d", p.CodeSize),
 		fmt.Sprintf("%d", len(p.RAMPageTable)),
 		fmt.Sprintf("%d", len(p.DiskPageTable)),
+		fmt.Sprintf("%s", p.completionTimeLabel()),
+		fmt.Sprintf("%d", p.Metrics.WaitTime.Value().Nanoseconds()),
 	}
+}
+
+func (p Process) completionTimeLabel() string {
+	if p.status != Terminated {
+		return ""
+	}
+	return fmt.Sprintf("%d", p.Metrics.CompletionTime.Value().Nanoseconds())
 }

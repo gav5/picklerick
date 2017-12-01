@@ -43,6 +43,21 @@ func (r processResultReport) Fprint(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	err = fprintProperty(w, "Status", r.p.Status())
+	if err != nil {
+		return err
+	}
+	if r.p.Status() == process.Terminated {
+		// Completion only listed if it was completed!
+		err = fprintProperty(w, "Completion Time", r.p.Metrics.CompletionTime)
+		if err != nil {
+			return err
+		}
+	}
+	err = fprintProperty(w, "Wait Time", r.p.Metrics.WaitTime)
+	if err != nil {
+		return err
+	}
 
 	err = fprintHeader(w, "Decoded Assembly")
 	if err != nil {
