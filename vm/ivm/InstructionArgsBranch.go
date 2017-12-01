@@ -35,3 +35,19 @@ func (args InstructionArgsBranch) ASM() string {
 		args.Base.ASM(),
 	)
 }
+
+// ASMHex returns the representation in assembly language (with hex args)
+func (args InstructionArgsBranch) ASMHex() string {
+	if args.Base == 0x0 {
+		return fmt.Sprintf(
+			"%s %s",
+			args.Destination.ASM(),
+			args.Address.Hex(),
+		)
+	}
+	return fmt.Sprintf(
+		"%s (%s)",
+		args.Destination.ASM(),
+		args.Base.ASM(),
+	)
+}
