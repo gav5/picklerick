@@ -15,8 +15,6 @@ import (
 type Process struct {
 	// CPUID is used to describe the CPU the process is being run on
 	CPUID uint8
-	// ProgramCounter (PC) describes where the program is at in execution
-	ProgramCounter ivm.Address
 	// CodeSize indicates the size of the code for the given process
 	CodeSize uint8
 	// Registers contains the list of standard CPU registers
@@ -46,57 +44,79 @@ type Process struct {
 // Make makes a Process from a given program
 func Make(p program.Program) Process {
 	return Process{
-		CPUID:          0x0,
-		ProgramCounter: 0x00,
-		CodeSize:       p.NumberOfWords,
-		ProcessNumber:  p.JobID,
-		Priority:       p.PriorityNumber,
-		RAMPageTable:   make(page.Table),
-		DiskPageTable:  make(page.Table),
-		Footprint:      4,
-		Program:        p,
-		state:          ivm.MakeState(),
-		status:         New,
-		isSleep:        false,
-		logger:         logger.New(fmt.Sprintf("process%02d", p.JobID)),
+		CPUID:         0x0,
+		CodeSize:      p.NumberOfWords,
+		ProcessNumber: p.JobID,
+		Priority:      p.PriorityNumber,
+		RAMPageTable:  make(page.Table),
+		DiskPageTable: make(page.Table),
+		Footprint:     4,
+		Program:       p,
+		state:         ivm.MakeState(),
+		status:        New,
+		isSleep:       false,
+		logger:        logger.New(fmt.Sprintf("process%02d", p.JobID)),
+	}
+}
+
+// Mock produces a fake process for testing.
+func Mock(p program.Program) Process {
+	return Process{
+		CPUID:         0x0,
+		CodeSize:      p.NumberOfWords,
+		ProcessNumber: p.JobID,
+		Priority:      p.PriorityNumber,
+		RAMPageTable:  make(page.Table),
+		DiskPageTable: make(page.Table),
+		Footprint:     4,
+		Program:       p,
+		state: ivm.State{
+			ProgramCounter: 0x00,
+			Halt:           false,
+			Error:          nil,
+			Registers:      [ivm.NumCoreRegisters]ivm.Word{},
+			Faults:         map[ivm.FrameNumber]bool{},
+			Caches:         ivm.FrameCacheArrayFromUint32Array(p.RAMRepresentation()),
+		},
+		status:  New,
+		isSleep: false,
+		logger:  logger.Dummy(),
 	}
 }
 
 // Sleep makes a process that tells the CPU to sleep each time.
 func Sleep() Process {
 	return Process{
-		CPUID:          0x0,
-		ProgramCounter: 0x00,
-		CodeSize:       1,
-		ProcessNumber:  0,
-		Priority:       0,
-		RAMPageTable:   make(page.Table),
-		DiskPageTable:  make(page.Table),
-		Footprint:      0,
-		Program:        program.Sleep(),
-		state:          ivm.Sleep(),
-		status:         Ready,
-		isSleep:        true,
-		logger:         logger.Dummy(),
+		CPUID:         0x0,
+		CodeSize:      1,
+		ProcessNumber: 0,
+		Priority:      0,
+		RAMPageTable:  make(page.Table),
+		DiskPageTable: make(page.Table),
+		Footprint:     0,
+		Program:       program.Sleep(),
+		state:         ivm.Sleep(),
+		status:        Ready,
+		isSleep:       true,
+		logger:        logger.Dummy(),
 	}
 }
 
 // Copy produces a duplicate process that is the same as the given one.
 func (p Process) Copy() Process {
 	return Process{
-		CPUID:          p.CPUID,
-		ProgramCounter: p.ProgramCounter,
-		CodeSize:       p.CodeSize,
-		ProcessNumber:  p.ProcessNumber,
-		Priority:       p.Priority,
-		RAMPageTable:   p.RAMPageTable.Copy(),
-		DiskPageTable:  p.DiskPageTable.Copy(),
-		Footprint:      p.Footprint,
-		Program:        p.Program.Copy(),
-		state:          p.state,
-		status:         p.status,
-		isSleep:        p.isSleep,
-		logger:         p.logger,
+		CPUID:         p.CPUID,
+		CodeSize:      p.CodeSize,
+		ProcessNumber: p.ProcessNumber,
+		Priority:      p.Priority,
+		RAMPageTable:  p.RAMPageTable.Copy(),
+		DiskPageTable: p.DiskPageTable.Copy(),
+		Footprint:     p.Footprint,
+		Program:       p.Program.Copy(),
+		state:         p.state,
+		status:        p.status,
+		isSleep:       p.isSleep,
+		logger:        p.logger,
 	}
 }
 

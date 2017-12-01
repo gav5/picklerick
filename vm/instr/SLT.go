@@ -16,11 +16,7 @@ type SLT struct {
 func (i SLT) Execute(ip ivm.InstructionProxy) {
 	source1 := ip.RegisterInt32(i.args.Source1)
 	source2 := ip.RegisterInt32(i.args.Source2)
-	if source1 < source2 {
-		ip.SetRegisterBool(i.args.Destination, true)
-	} else {
-		ip.SetRegisterBool(i.args.Destination, false)
-	}
+	ip.SetRegisterBool(i.args.Destination, source1 < source2)
 }
 
 // Assembly returns the representation in assembly language

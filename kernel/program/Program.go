@@ -117,3 +117,8 @@ func (p Program) Copy() Program {
 	copy(copyProgram.Instructions[:], p.Instructions[:])
 	return copyProgram
 }
+
+// RAMRepresentation returns the data that would go in RAM as a straight array.
+func (p Program) RAMRepresentation() []uint32 {
+	return append(p.Instructions, p.DataBlock...)
+}

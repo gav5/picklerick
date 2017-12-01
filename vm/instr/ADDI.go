@@ -13,9 +13,9 @@ type ADDI struct {
 
 // Execute runs the ADDI instruction
 func (i ADDI) Execute(ip ivm.InstructionProxy) {
-	base := ip.RegisterInt32(i.args.Base)
+	ival := ivm.Word(i.args.Address).Int32()
 	dest := ip.RegisterInt32(i.args.Destination)
-	ip.SetRegisterInt32(i.args.Destination, base+dest)
+	ip.SetRegisterInt32(i.args.Destination, dest+ival)
 }
 
 // Assembly returns the representation in assembly language

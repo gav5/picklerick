@@ -40,6 +40,17 @@ func MakeArray() [ivm.NumCores]Core {
 	return cores
 }
 
+// Mock builds a core for testing.
+func Mock(sampleProcess process.Process) Core {
+	return Core{
+		CoreNum:   0,
+		Process:   sampleProcess,
+		Next:      sampleProcess.State().Next(),
+		logger:    logger.Dummy(),
+		snapshots: []Snapshot{},
+	}
+}
+
 // Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() {
 	c.logger.SetPrefix(c.logPrefix())
@@ -69,40 +80,6 @@ func (c Core) currentInstruction() (ivm.Instruction, error) {
 		return nil, err
 	}
 	return instr, nil
-}
-
-// Apply a process to the given CPU Core.
-func (c *Core) Apply(p *process.Process) {
-	if p == nil {
-		c.logger.Printf("NO JOB")
-
-		c.Process = process.Sleep()
-		// c.ShouldHalt = true
-		return
-	}
-	// if c.CurrentProcess != p {
-	// 	c.logger.Printf(
-	// 		"[CPU%d] Job #%d\n",
-	// 		c.CoreNum, p.ProcessNumber,
-	// 	)
-	// 	c.ShouldHalt = false
-	// 	c.PC = p.ProgramCounter
-	// 	(*p).CPUID = c.CoreNum
-	// 	copy(c.Registers[:], p.Registers[:])
-	// 	c.CurrentProcess = p
-	// }
-}
-
-// Save applies the CPU Core's current state to the process.
-func (c *Core) Save() {
-	// if c.CurrentProcess == nil {
-	// 	return
-	// }
-	// c.CurrentProcess.ProgramCounter = c.PC
-	// copy(c.CurrentProcess.Registers[:], c.Registers[:])
-	// if c.ShouldHalt {
-	// 	c.CurrentProcess.Status = process.Done
-	// }
 }
 
 func (c Core) logPrefix() string {

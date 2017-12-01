@@ -13,7 +13,13 @@ type RD struct {
 
 // Execute runs the given RD instruction
 func (i RD) Execute(ip ivm.InstructionProxy) {
-	val := ip.AddressFetchWord(i.args.Address)
+	var addr ivm.Address
+	if i.args.Register2 == ivm.R0 {
+		addr = i.args.Address
+	} else {
+		addr = ivm.Address(ip.RegisterWord(i.args.Register2))
+	}
+	val := ip.AddressFetchWord(addr)
 	ip.SetRegisterWord(i.args.Register1, val)
 }
 

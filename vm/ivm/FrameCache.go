@@ -13,6 +13,16 @@ func addressTranslate(addr Address) (FrameNumber, int) {
 	return FrameNumber(byteAddr / FrameSize), (int(byteAddr) % FrameSize)
 }
 
+// FrameCacheArrayFromUint32Array returns a frame cache for the given array
+func FrameCacheArrayFromUint32Array(ary []uint32) FrameCache {
+	frameArray := FrameArrayFromUint32Array(ary)
+	fc := FrameCache{}
+	for i, fr := range frameArray {
+		fc[FrameNumber(i)] = fr
+	}
+	return fc
+}
+
 // AddressFetchWord gets a word at the given address.
 func (fc FrameCache) AddressFetchWord(addr Address) Word {
 	fn, fi := addressTranslate(addr)
