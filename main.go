@@ -45,7 +45,9 @@ func main() {
 	// run the virtual machine
 	err = virtualMachine.Run()
 	if err != nil {
-		log.Fatalf("ERROR running VM: %v", err)
+		// if this fails, we want to keep going
+		// (this is because we still want reports to be generated)
+		log.Printf("ERROR running VM: %v", err)
 	}
 
 	// build the reports and save to disk
