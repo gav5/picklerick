@@ -63,11 +63,11 @@ func (vm *VM) Run() error {
 		// (obviously when this is the case we should break out of the loop)
 		if vm.osKernel.IsDone() {
 			vm.logger.Printf("Kernel is DONE: breaking!")
-			return nil
 		}
 	}
-	vm.logger.Printf("reached end of cycle limit: %d", vm.maxCycles)
-	return nil
+	err := fmt.Errorf("Reached the end of the cycle limit: %d", vm.maxCycles)
+	vm.logger.Printf("ERROR: %v", err)
+	return err
 }
 
 func (vm *VM) runCycle() error {
