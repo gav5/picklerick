@@ -5,5 +5,5 @@
   "qsize": 200,
   "maxcycles": 10000,
   "quiet": true,
-  "dump_at": ""
+  "dump_at": "1@54"
 }

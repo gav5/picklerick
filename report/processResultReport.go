@@ -60,38 +60,32 @@ func (r processResultReport) Fprint(w io.Writer) error {
 		}
 	}
 
-	inBufStart, inBufEnd := r.p.InputBufferRange()
-	err = fprintHeader(w, fmt.Sprintf(
-		"Input Buffer [0x%02X - 0x%02X]", uint32(inBufStart), uint32(inBufEnd),
-	))
+	err = fprintHeader(w, "Input Buffer")
 	if err != nil {
 		return err
 	}
-	err = fprintWords(w, r.p.InputBuffer(r.v))
-	if err != nil {
-		return err
-	}
-
-	tempBufStart, tempBufEnd := r.p.TempBufferRange()
-	err = fprintHeader(w, fmt.Sprintf(
-		"Temp Buffer [0x%02X - 0x%02X]", uint32(tempBufStart), uint32(tempBufEnd),
-	))
-	if err != nil {
-		return err
-	}
-	err = fprintWords(w, r.p.TempBuffer(r.v))
+	inWords, inOffset := r.p.InputBuffer(r.v)
+	err = fprintBuffer(w, inWords, inOffset)
 	if err != nil {
 		return err
 	}
 
-	outBufStart, outBufEnd := r.p.OutputBufferRange()
-	err = fprintHeader(w, fmt.Sprintf(
-		"Output Buffer [0x%02X - 0x%02X]", uint32(outBufStart), uint32(outBufEnd),
-	))
+	err = fprintHeader(w, "Output Buffer")
 	if err != nil {
 		return err
 	}
-	err = fprintWords(w, r.p.OutputBuffer(r.v))
+	outWords, outOffset := r.p.OutputBuffer(r.v)
+	err = fprintBuffer(w, outWords, outOffset)
+	if err != nil {
+		return err
+	}
+
+	err = fprintHeader(w, "Temp Buffer")
+	if err != nil {
+		return err
+	}
+	tempWords, tempOffset := r.p.TempBuffer(r.v)
+	err = fprintBuffer(w, tempWords, tempOffset)
 	if err != nil {
 		return err
 	}

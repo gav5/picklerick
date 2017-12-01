@@ -32,7 +32,7 @@ func New(c config.Config) (*VM, error) {
 		Clock:     0x00000000,
 		Cores:     core.MakeArray(),
 		RAM:       MakeRAM(),
-		Disk:      Disk{},
+		Disk:      MakeDisk(),
 		maxCycles: c.MaxCycles,
 		logger:    logger.New("vm"),
 	}
@@ -168,6 +168,7 @@ func (vm VM) setupCore(c *core.Core) {
 func (vm VM) handleCore(c *core.Core) error {
 	vm.logger.Printf("handle core %d", c.CoreNum)
 	s := c.Process.State()
+	var err error
 
 	if c.Process.IsSleep() {
 		// there was no process, so an early exit is in order
@@ -191,7 +192,10 @@ func (vm VM) handleCore(c *core.Core) error {
 		// stop the process and declare it a failure
 		// (this should essentially be treated the same as a halt)
 		vm.osKernel.CompleteProcess(&c.Process)
-		vm.osKernel.UpdateProcess(c.Process)
+		err = vm.osKernel.UpdateProcess(c.Process)
+		if err != nil {
+			return err
+		}
 
 		// since this is done, the process should be cleared
 		// (this sends the message to later fill it if possible)
@@ -219,7 +223,10 @@ func (vm VM) handleCore(c *core.Core) error {
 		c.Process.SetState(s.Apply(c.Next))
 
 		vm.osKernel.CompleteProcess(&c.Process)
-		vm.osKernel.UpdateProcess(c.Process)
+		err = vm.osKernel.UpdateProcess(c.Process)
+		if err != nil {
+			return err
+		}
 		// since this is done, the process should be cleared
 		// (this sends the message to later fill it if possible)
 		c.Process = process.Sleep()
@@ -234,11 +241,20 @@ func (vm VM) handleCore(c *core.Core) error {
 		// ensure the faults persist (and nothing else)
 		s.Faults = c.Next.Faults.Copy()
 		c.Process.SetState(s)
-		vm.osKernel.UpdateProcess(c.Process)
+
+		err = vm.osKernel.UpdateProcess(c.Process)
+		if err != nil {
+			return err
+		}
+
 		c.Process = process.Sleep()
 	} else {
 		// this was actually successful, so apply next so it's the actual state
 		c.Process.SetState(s.Apply(c.Next))
+		err = vm.osKernel.UpdateProcess(c.Process)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

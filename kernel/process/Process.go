@@ -160,7 +160,7 @@ func (p *Process) SetStatus(val Status) {
 
 // InputBufferOffset returns the offset to use to get the input buffer.
 func (p Process) InputBufferOffset() int {
-	return int(p.Program.NumberOfWords + 1)
+	return int(p.Program.NumberOfWords)
 }
 
 // InputBufferRange returns the range of addresses used for the input buffer.
@@ -173,7 +173,7 @@ func (p Process) InputBufferRange() (ivm.Address, ivm.Address) {
 // InputBuffer returns the input section of the process.
 // This is for reporting use only (use caches for program execution)
 // This feeds from disk, so it will only work after the whole system is complete
-func (p Process) InputBuffer(v ivm.IVM) []ivm.Word {
+func (p Process) InputBuffer(v ivm.IVM) ([]ivm.Word, int) {
 	return p.fetchFromResultBuffer(
 		p.InputBufferOffset(),
 		p.Program.InputBufferSize,
@@ -183,7 +183,7 @@ func (p Process) InputBuffer(v ivm.IVM) []ivm.Word {
 
 // TempBufferOffset returns the offset to use to get the temp buffer.
 func (p Process) TempBufferOffset() int {
-	return int(p.Program.NumberOfWords + p.Program.InputBufferSize + 1)
+	return int(p.Program.NumberOfWords + p.Program.InputBufferSize + p.Program.OutputBufferSize)
 }
 
 // TempBufferRange returns the range of addresses used for the temp buffer.
@@ -193,7 +193,7 @@ func (p Process) TempBufferRange() (ivm.Address, ivm.Address) {
 
 // TempBuffer returns the temp section of the process.
 // This is for reporting use only (use caches for program execution)
-func (p Process) TempBuffer(v ivm.IVM) []ivm.Word {
+func (p Process) TempBuffer(v ivm.IVM) ([]ivm.Word, int) {
 	return p.fetchFromResultBuffer(
 		p.TempBufferOffset(),
 		p.Program.TempBufferSize,
@@ -203,7 +203,7 @@ func (p Process) TempBuffer(v ivm.IVM) []ivm.Word {
 
 // OutputBufferOffset returns the offset to use to get the output buffer.
 func (p Process) OutputBufferOffset() int {
-	return int(p.Program.NumberOfWords + p.Program.InputBufferSize + p.Program.TempBufferSize + 1)
+	return int(p.Program.NumberOfWords + p.Program.InputBufferSize)
 }
 
 // OutputBufferRange returns the range of addresses used for the output buffer.
@@ -216,7 +216,7 @@ func (p Process) OutputBufferRange() (ivm.Address, ivm.Address) {
 
 // OutputBuffer returns the output section of the process.
 // This is for reporting use only (use caches for program execution)
-func (p Process) OutputBuffer(v ivm.IVM) []ivm.Word {
+func (p Process) OutputBuffer(v ivm.IVM) ([]ivm.Word, int) {
 	return p.fetchFromResultBuffer(
 		p.OutputBufferOffset(),
 		p.Program.OutputBufferSize,
@@ -229,9 +229,9 @@ func (p Process) resultBufferRange(offset int, size uint8) (ivm.Address, ivm.Add
 	return addr, addr + ivm.AddressForIndex(int(size)-1)
 }
 
-func (p Process) fetchFromResultBuffer(offset int, size uint8, v ivm.IVM) []ivm.Word {
+func (p Process) fetchFromResultBuffer(offset int, size uint8, v ivm.IVM) ([]ivm.Word, int) {
 	buf := make([]ivm.Word, size)
-	dataOffset := offset - int(p.Program.NumberOfWords) - 1
+	dataOffset := offset - int(p.Program.NumberOfWords)
 	for i := range buf {
 		addr := ivm.AddressForIndex(offset + i)
 		frameNumber, frameIndex, ok := p.DiskPageTable.PairForAddressSoft(addr)
@@ -240,11 +240,18 @@ func (p Process) fetchFromResultBuffer(offset int, size uint8, v ivm.IVM) []ivm.
 			frame := v.DiskFrameFetch(frameNumber)
 			buf[i] = frame[frameIndex]
 		} else {
-			// get the value from the original program (because it's never been touched by the program)
-			buf[i] = ivm.Word(p.Program.DataBlock[dataOffset+i])
+			frameNumber, frameIndex, ok = p.RAMPageTable.PairForAddressSoft(addr)
+			if ok {
+				// get the value from RAM (because it was never saved back)
+				frame := v.RAMFrameFetch(frameNumber)
+				buf[i] = frame[frameIndex]
+			} else {
+				// get the value from the original program (because it's never been touched by the program)
+				buf[i] = ivm.Word(p.Program.DataBlock[dataOffset+i])
+			}
 		}
 	}
-	return buf
+	return buf, offset
 }
 
 // MakeArray makes an array of Processes from a given array of programs.

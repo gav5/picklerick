@@ -125,6 +125,11 @@ func (sched *Scheduler) Update(p process.Process) error {
 	for i := sched.processList.Len() - 1; i >= 0; i-- {
 		pX := sched.processList.base[i]
 		if p.ProcessNumber == pX.ProcessNumber {
+			// apply the contents to RAM
+			err := sched.Apply(p)
+			if err != nil {
+				return err
+			}
 			sched.processList.base[i] = p
 			sched.logger.Printf(
 				"updated process %d",
@@ -136,6 +141,47 @@ func (sched *Scheduler) Update(p process.Process) error {
 	err := NotFoundError{}
 	sched.logger.Printf(
 		"ERROR updating process %d: %v",
+		p.ProcessNumber, err,
+	)
+	return err
+}
+
+// Apply writes the contents of caches to the system RAM
+func (sched *Scheduler) Apply(p process.Process) error {
+	sched.logger.Printf("[Apply] apply process %d to RAM", p.ProcessNumber)
+	// defer to the page manager
+	err := sched.pm.Apply(p)
+	if err != nil {
+		sched.logger.Printf("[Apply] ERROR: %v", err)
+		return err
+	}
+	return nil
+}
+
+// Refresh updates a given process with the one in the list.
+func (sched *Scheduler) Refresh(p *process.Process) error {
+	sched.logger.Printf("[Refresh] refresh process %d", p.ProcessNumber)
+	for i := sched.processList.Len() - 1; i >= 0; i-- {
+		pX := sched.processList.base[i]
+		if p.ProcessNumber == pX.ProcessNumber {
+			// reassign to the appropriate item in the list
+			(*p) = sched.processList.base[i]
+
+			// refresh the cache contents from RAM
+			st := p.State()
+			st.Caches = sched.pm.CachesForProcess(p)
+			(*p).SetState(st)
+
+			sched.logger.Printf(
+				"refreshed process %d",
+				p.ProcessNumber,
+			)
+			return nil
+		}
+	}
+	err := NotFoundError{}
+	sched.logger.Printf(
+		"ERROR refreshing process %d: %v",
 		p.ProcessNumber, err,
 	)
 	return err
@@ -206,15 +252,21 @@ func (sched *Scheduler) Unload(p *process.Process) error {
 }
 
 // Complete completes the given processs (marks it Terminated).
-func (sched *Scheduler) Complete(p *process.Process) error {
+func (sched *Scheduler) Complete(p *process.Process) {
 	// mark is Terminated (this will get cleaned up later)
 	p.SetStatus(process.Terminated)
 	// add the process number to the process unload queue
 	// this ensures the leftover memory doesn't just sit around forever
-	sched.processUnloadQueue.Push(p.ProcessNumber)
+	(*sched.processUnloadQueue).Push(p.ProcessNumber)
 
-	sched.logger.Printf("process %d completed/terminated", p.ProcessNumber)
-	return nil
+	sched.logger.Printf(
+		"[Complete] %d items now in the process unload queue",
+		sched.processUnloadQueue.Len(),
+	)
+	sched.logger.Printf(
+		"[Complete] process %d completed/terminated",
+		p.ProcessNumber,
+	)
 }
 
 // NotFoundError is when the desired process is not in the list.

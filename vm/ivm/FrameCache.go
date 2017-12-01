@@ -1,9 +1,11 @@
 package ivm
 
-import "fmt"
-import "sort"
-import "io"
-import "os"
+import (
+	"fmt"
+	"io"
+	"os"
+	"sort"
+)
 
 // FrameCache is a holding space for addressible frames.
 type FrameCache map[FrameNumber]Frame
@@ -70,9 +72,18 @@ func (fc FrameCache) Fprint(w io.Writer) error {
 	slice := fc.Slice()
 	var err error
 	for _, fn := range slice {
-		_, err = fmt.Fprintf(w, "\n[P%02d: %v]", int(fn), fc[fn])
-		if err != nil {
-			return err
+		for i, cell := range fc[fn] {
+			var sep string
+			if i > 0 {
+				sep = "  "
+			} else {
+				sep = "\n"
+			}
+			addr := AddressForFramePair(fn, i)
+			_, err = fmt.Fprintf(w, "%s[%03X: %v]", sep, uint32(addr), cell)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

@@ -1,7 +1,6 @@
 package report
 
 import (
-	"fmt"
 	"io"
 
 	"../vm"
@@ -28,21 +27,5 @@ func (ramDumpReport) Title() string {
 }
 
 func (r ramDumpReport) Fprint(w io.Writer) error {
-	for fnum, frame := range r.ram {
-		var err error
-
-		_, err = fmt.Fprintf(w, "\n[%02X: ", fnum)
-		if err != nil {
-			return err
-		}
-		err = frame.Fprint(w)
-		if err != nil {
-			return err
-		}
-		_, err = fmt.Fprint(w, "]")
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return r.ram.Fprint(w)
 }

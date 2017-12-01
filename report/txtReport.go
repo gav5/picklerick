@@ -63,18 +63,34 @@ func fprintProperty(w io.Writer, pName string, pVal interface{}) error {
 
 func fprintWords(w io.Writer, wordsArray []ivm.Word) error {
 	for i, word := range wordsArray {
+		var sep string
 		if i%4 > 0 {
-			_, err := fmt.Fprint(w, "  ")
-			if err != nil {
-				return err
-			}
+			sep = " "
 		} else {
-			_, err := fmt.Fprint(w, "\n")
-			if err != nil {
-				return err
-			}
+			sep = "\n"
 		}
-		_, err := fmt.Fprintf(w, "0x%08X", uint32(word))
+		_, err := fmt.Fprintf(w, "%s0x%08X", sep, uint32(word))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func fprintBuffer(w io.Writer, wordsArray []ivm.Word, offset int) error {
+	for i, word := range wordsArray {
+		addr := ivm.AddressForIndex(offset + i)
+		var sep string
+		if i%4 > 0 {
+			sep = "  "
+		} else {
+			fn, _ := addr.FramePair()
+			sep = fmt.Sprintf("\n%02X  ", uint32(fn))
+		}
+		_, err := fmt.Fprintf(
+			w, "%s[%03X: 0x%08X]",
+			sep, uint32(addr), uint32(word),
+		)
 		if err != nil {
 			return err
 		}

@@ -76,33 +76,62 @@ func (k Kernel) ProcessForCore(corenum uint8) process.Process {
 
 // UpdateProcess updates an existing process in the list.
 func (k Kernel) UpdateProcess(p process.Process) error {
-	// defer to the scheduler
 	k.logger.Printf(
 		"updating process %d (status %v)",
 		p.ProcessNumber, p.Status,
 	)
+	// defer to the scheduler
 	err := k.sched.Update(p)
 	if err != nil {
 		k.logger.Printf(
 			"ERROR updating process %d: %v",
 			p.ProcessNumber, err,
 		)
+		return err
 	}
-	return err
+	return nil
+}
+
+// RefreshProcess updates a given process to the state in the list.
+func (k Kernel) RefreshProcess(p *process.Process) error {
+	k.logger.Printf(
+		"refreshing process %d (status %v)",
+		p.ProcessNumber, p.Status,
+	)
+	// defer to the scheduler
+	err := k.sched.Refresh(p)
+	if err != nil {
+		k.logger.Printf(
+			"ERROR refreshing process %d: %v",
+			p.ProcessNumber, err,
+		)
+		return err
+	}
+	return nil
+}
+
+// SaveProcess saves the contents of the process cache to RAM.
+func (k Kernel) SaveProcess(p *process.Process) error {
+	k.logger.Printf("saving process %d", p.ProcessNumber)
+	// defer to the scheduler
+	err := k.sched.Save(p)
+	if err != nil {
+		k.logger.Printf("ERROR saving process %d: %v", p.ProcessNumber, err)
+		return err
+	}
+	return nil
 }
 
 // LoadProcess makes sure the given process is in RAM.
 func (k Kernel) LoadProcess(p *process.Process) error {
-	// defer to the scheduler
 	k.logger.Printf("loading process %d", p.ProcessNumber)
+	// defer to the scheduler
 	err := k.sched.Load(p)
 	if err != nil {
-		k.logger.Printf(
-			"ERROR loading process %d: %v",
-			p.ProcessNumber, err,
-		)
+		k.logger.Printf("ERROR loading process %d: %v", p.ProcessNumber, err)
+		return err
 	}
-	return err
+	return nil
 }
 
 // CompleteProcess marks a process as completed and removes its used resources.
