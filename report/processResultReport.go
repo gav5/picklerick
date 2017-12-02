@@ -58,6 +58,10 @@ func (r processResultReport) Fprint(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	err = fprintProperty(w, "Cycles Used", r.p.Metrics.Cycles)
+	if err != nil {
+		return err
+	}
 
 	err = fprintHeader(w, "Decoded Assembly")
 	if err != nil {

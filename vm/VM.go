@@ -176,6 +176,9 @@ func (vm VM) handleCore(c *core.Core) error {
 		return nil
 	}
 
+	// record metrics for the given process
+	c.Process.Metrics.Cycles.Increment(1)
+
 	if c.Next.Error != nil {
 		// an error occured with the instruction execution
 		vm.logger.Printf(

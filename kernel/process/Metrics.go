@@ -1,6 +1,7 @@
 package process
 
 import (
+	"../../metric/counter"
 	"../../metric/stopwatch"
 )
 
@@ -8,7 +9,7 @@ import (
 type Metrics struct {
 	WaitTime       stopwatch.Stopwatch
 	CompletionTime stopwatch.Stopwatch
-	// IOOperationCount  counter.Counter
+	Cycles         counter.Counter
 	// RAMUse            fractional.Fractional
 	// CacheUse          fractional.Fractional
 }
@@ -18,6 +19,7 @@ func MakeMetrics() Metrics {
 	return Metrics{
 		WaitTime:       stopwatch.Make(),
 		CompletionTime: stopwatch.Make(),
+		Cycles:         counter.Make(),
 	}
 }
 

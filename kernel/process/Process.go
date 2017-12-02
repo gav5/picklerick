@@ -281,6 +281,7 @@ func TableHeaders() []string {
 		"Disk Pages",
 		"Completion Time (ns)",
 		"Wait Time (ns)",
+		"Cycles",
 	}
 }
 
@@ -295,6 +296,7 @@ func (p Process) TableRow() []string {
 		fmt.Sprintf("%d", len(p.DiskPageTable)),
 		fmt.Sprintf("%s", p.completionTimeLabel()),
 		fmt.Sprintf("%d", p.Metrics.WaitTime.Value().Nanoseconds()),
+		fmt.Sprintf("%d", p.Metrics.Cycles.Value()),
 	}
 }
 
