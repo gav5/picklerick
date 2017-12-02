@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"../ivm"
-
 )
 
 // MOV transfers the contents of one register into another
@@ -14,8 +13,8 @@ type MOV struct {
 
 // Execute runs the given MOV instruction
 func (i MOV) Execute(ip ivm.InstructionProxy) {
-	source := ip.RegisterUint32(i.args.Source1)
-	ip.SetRegisterUint32(i.args.Destination, source)
+	source := ip.RegisterWord(i.args.Source2)
+	ip.SetRegisterWord(i.args.Destination, source)
 }
 
 // Assembly returns the representation in assembly language

@@ -15,7 +15,7 @@ func (sched *Scheduler) Clean() error {
 
 	// unload each process in the unload queue
 	for sched.processUnloadQueue.Len() > 0 {
-		pNum := sched.processUnloadQueue.Pop().(uint8)
+		pNum := sched.processUnloadQueue.Peek()
 		p := sched.Find(pNum)
 		var err error
 
@@ -38,7 +38,7 @@ func (sched *Scheduler) Clean() error {
 		if err != nil {
 			// put this back onto the process unload queue (to be handled later)
 			// this is okay to do since we are returning here anyway
-			sched.processUnloadQueue.Push(pNum)
+			// sched.processUnloadQueue.Push(pNum)
 
 			sched.logger.Printf(
 				"[Clean] ERROR saving process %d: %v",
@@ -53,7 +53,7 @@ func (sched *Scheduler) Clean() error {
 		if err != nil {
 			// put this back onto the process unload queue (to be handled later)
 			// this is okay to do since we are returning here anyway
-			sched.processUnloadQueue.Push(pNum)
+			// sched.processUnloadQueue.Push(pNum)
 
 			sched.logger.Printf(
 				"[Clean] ERROR unloading process %d: %v",
@@ -62,6 +62,7 @@ func (sched *Scheduler) Clean() error {
 			return err
 		}
 
+		_ = sched.processUnloadQueue.Pop()
 		sched.logger.Printf(
 			"[Clean] process %d has been cleaned",
 			pNum,

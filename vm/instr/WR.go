@@ -19,7 +19,7 @@ func (i WR) Execute(ip ivm.InstructionProxy) {
 
 // Assembly returns the representation in assembly language
 func (i WR) Assembly() string {
-	return fmt.Sprintf("WR %s", i.args.ASM())
+	return fmt.Sprintf("WR %s", i.args.ASMHex())
 }
 
 // MakeWR makes a WR instruction for the given args

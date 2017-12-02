@@ -25,7 +25,7 @@ func (i RD) Execute(ip ivm.InstructionProxy) {
 
 // Assembly returns the representation in assembly language
 func (i RD) Assembly() string {
-	return fmt.Sprintf("RD %s", i.args.ASM())
+	return fmt.Sprintf("RD %s", i.args.ASMHex())
 }
 
 // MakeRD makes an RD instruction for the given args

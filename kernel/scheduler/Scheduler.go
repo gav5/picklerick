@@ -257,7 +257,7 @@ func (sched *Scheduler) Complete(p *process.Process) {
 	p.SetStatus(process.Terminated)
 	// add the process number to the process unload queue
 	// this ensures the leftover memory doesn't just sit around forever
-	(*sched.processUnloadQueue).Push(p.ProcessNumber)
+	(*sched).processUnloadQueue.Push(p.ProcessNumber)
 
 	sched.logger.Printf(
 		"[Complete] %d items now in the process unload queue",

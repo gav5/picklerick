@@ -17,6 +17,7 @@ func (pq *processQueue) Push(x interface{}) {
 	pNum := x.(uint8)
 	(*pq).base = append(pq.base, pNum)
 	pq.logger.Printf("Pushed process %d", pNum)
+	pq.logger.Printf("Queue now %v", pq.base)
 }
 
 func (pq *processQueue) Pop() interface{} {
@@ -26,6 +27,7 @@ func (pq *processQueue) Pop() interface{} {
 	(*pq).base = old[0 : n-1]
 
 	pq.logger.Printf("Popped process %d", x)
+	pq.logger.Printf("Queue now %v", pq.base)
 	return x
 }
 
