@@ -3,25 +3,30 @@ package core
 import (
 	"fmt"
 	"log"
-	"../decoder"
+
 	"../../kernel/process"
+	"../../util/logger"
+	"../decoder"
 	"../ivm"
-	// "../../kernel/page"
 )
 
 // Core describes a CPU Core in the virtual machine.
 type Core struct {
-	CoreNum	uint8
-	Process process.Process
-	Next ivm.State
+	CoreNum   uint8
+	Process   process.Process
+	Next      ivm.State
+	logger    *log.Logger
+	snapshots []Snapshot
 }
 
 // Make builds a new core.
 func Make(coreNum uint8) Core {
 	return Core{
-		CoreNum: coreNum,
-		Process: process.Sleep(), // <- obviously this is a bad assumption
-		Next: ivm.MakeState(),
+		CoreNum:   coreNum,
+		Process:   process.Sleep(), // <- obviously this is a bad assumption
+		Next:      ivm.MakeState(),
+		logger:    logger.New(fmt.Sprintf("core%d", coreNum)),
+		snapshots: []Snapshot{},
 	}
 }
 
@@ -30,48 +35,46 @@ func Make(coreNum uint8) Core {
 func MakeArray() [ivm.NumCores]Core {
 	cores := [ivm.NumCores]Core{}
 	for i := range cores {
-		cores[i] = Make(uint8(i+1))
+		cores[i] = Make(uint8(i + 1))
 	}
 	return cores
 }
 
+// Mock builds a core for testing.
+func Mock(sampleProcess process.Process) Core {
+	return Core{
+		CoreNum:   0,
+		Process:   sampleProcess,
+		Next:      sampleProcess.State().Next(),
+		logger:    logger.Dummy(),
+		snapshots: []Snapshot{},
+	}
+}
+
 // Call runs the instruction at PC, increments PC (unless manually set).
 func (c *Core) Call() {
-
-	var callsign string
-	if c.Process.IsSleep() {
-		callsign = fmt.Sprintf(
-			"[CORE%d:00/zzzz]",
-			c.CoreNum,
-		)
-	} else {
-		callsign = fmt.Sprintf(
-			"[CORE%d:%02d/%04x]",
-			c.CoreNum, c.Process.ProcessNumber,
-			uint(c.Process.State.ProgramCounter),
-		)
-	}
+	c.logger.SetPrefix(c.logPrefix())
 
 	// get the current instruction
 	instruction, err := c.currentInstruction()
 	if err != nil {
-		log.Printf("%s INSTR DECODE ERR: %v\n", callsign, err)
+		c.logger.Printf("INSTR DECODE ERR: %v", err)
 		c.Next.Error = err
 		return
 	}
 
-
 	// execute the current instruction
 	// (passing in the next state of the system)
 	// (this will be handled by the virtual machine later)
-	log.Printf("%s Executing %v\n", callsign, instruction.Assembly())
+	c.logger.Printf("Executing %v", instruction.Assembly())
 	ip := ivm.MakeInstructionProxy(&c.Next)
 	instruction.Execute(ip)
 }
 
 func (c Core) currentInstruction() (ivm.Instruction, error) {
-	pc := c.Process.State.ProgramCounter
-	raw := c.Process.State.Caches.AddressFetchWord(pc).Uint32()
+	s := c.Process.State()
+	pc := s.ProgramCounter
+	raw := s.Caches.AddressFetchWord(pc).Uint32()
 	instr, err := decoder.DecodeInstruction(raw)
 	if err != nil {
 		return nil, err
@@ -79,36 +82,16 @@ func (c Core) currentInstruction() (ivm.Instruction, error) {
 	return instr, nil
 }
 
-// Apply a process to the given CPU Core.
-func (c *Core) Apply(p *process.Process) {
-	if p == nil {
-		log.Printf("[CPU%d] NO JOB\n", c.CoreNum)
-
-		c.Process = process.Sleep()
-		// c.ShouldHalt = true
-		return
+func (c Core) logPrefix() string {
+	if c.Process.IsSleep() {
+		return fmt.Sprintf(
+			"core%d:00/zzzz | ",
+			c.CoreNum,
+		)
 	}
-	// if c.CurrentProcess != p {
-	// 	log.Printf(
-	// 		"[CPU%d] Job #%d\n",
-	// 		c.CoreNum, p.ProcessNumber,
-	// 	)
-	// 	c.ShouldHalt = false
-	// 	c.PC = p.ProgramCounter
-	// 	(*p).CPUID = c.CoreNum
-	// 	copy(c.Registers[:], p.Registers[:])
-	// 	c.CurrentProcess = p
-	// }
-}
-
-// Save applies the CPU Core's current state to the process.
-func (c *Core) Save() {
-	// if c.CurrentProcess == nil {
-	// 	return
-	// }
-	// c.CurrentProcess.ProgramCounter = c.PC
-	// copy(c.CurrentProcess.Registers[:], c.Registers[:])
-	// if c.ShouldHalt {
-	// 	c.CurrentProcess.Status = process.Done
-	// }
+	return fmt.Sprintf(
+		"core%d:%02d/%04x | ",
+		c.CoreNum, c.Process.ProcessNumber,
+		uint(c.Process.State().ProgramCounter),
+	)
 }

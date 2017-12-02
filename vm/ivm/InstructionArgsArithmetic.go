@@ -16,7 +16,7 @@ func (args InstructionArgs) ArithmeticFormat() InstructionArgsArithmetic {
 	return InstructionArgsArithmetic{
 		Source1:     args.extractRegister(0xf00000),
 		Source2:     args.extractRegister(0x0f0000),
-		Destination: args.extractRegister(0x00f000),
+		Destination: args.extractRegister(0xf0f000),
 	}
 }
 
@@ -24,8 +24,8 @@ func (args InstructionArgs) ArithmeticFormat() InstructionArgsArithmetic {
 func (args InstructionArgsArithmetic) ASM() string {
 	return fmt.Sprintf(
 		"%s %s %s",
-		args.Source1.ASM(),
 		args.Destination.ASM(),
+		args.Source1.ASM(),
 		args.Source2.ASM(),
 	)
 }

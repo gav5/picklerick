@@ -24,7 +24,7 @@ func (i LDI) Execute(ip ivm.InstructionProxy) {
 
 // Assembly returns the representation in assembly language
 func (i LDI) Assembly() string {
-	return fmt.Sprintf("LDI %s", i.args.ASM())
+	return fmt.Sprintf("LDI %s", i.args.ASMHex())
 }
 
 // MakeLDI makes an LDI instruction for the given args

@@ -14,8 +14,8 @@ type BEQ struct {
 
 // Execute runs the BEQ instruction
 func (i BEQ) Execute(ip ivm.InstructionProxy) {
-	base := ip.RegisterUint32(i.args.Base)
-	dest := ip.RegisterUint32(i.args.Destination)
+	base := ip.RegisterInt32(i.args.Base)
+	dest := ip.RegisterInt32(i.args.Destination)
 	if base == dest {
 		ip.SetProgramCounter(i.args.Address)
 	}

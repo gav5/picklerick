@@ -3,5 +3,7 @@
   "outdir": "out",
   "sched": "fcfs",
   "qsize": 200,
-  "maxcycles": 100000
+  "maxcycles": 10000,
+  "quiet": true,
+  "dump_at": "13@50,14@44,15@50,16@44"
 }

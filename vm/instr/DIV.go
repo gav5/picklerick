@@ -15,11 +15,11 @@ type DIV struct {
 func (i DIV) Execute(ip ivm.InstructionProxy) {
 	source1 := ip.RegisterInt32(i.args.Source1)
 	source2 := ip.RegisterInt32(i.args.Source2)
-	if source2 == 0 {
+	if source1 == 0 {
 		ip.Error(DIVbyZero{})
 		return
 	}
-	ip.SetRegisterInt32(i.args.Destination, source1/source2)
+	ip.SetRegisterInt32(i.args.Destination, source2/source1)
 }
 
 // Assembly returns the representation in assembly language
@@ -33,7 +33,8 @@ func MakeDIV(args ivm.InstructionArgs) ivm.Instruction {
 }
 
 // DIVbyZero describes a situation where DIV is asked to divide by zero.
-type DIVbyZero struct {}
+type DIVbyZero struct{}
+
 func (err DIVbyZero) Error() string {
 	return "cannot DIV by zero"
 }

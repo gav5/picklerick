@@ -73,7 +73,7 @@ func (ip InstructionProxy) SetRegisterBool(regNum RegisterDesignation, val bool)
 }
 
 func (ip InstructionProxy) translateAddress(addr Address) (FrameNumber, int) {
-	return FrameNumber(addr/FrameSize), int(addr % FrameSize)
+	return addr.FramePair()
 }
 
 // AddressFetchWord returns the word value at the given address.

@@ -13,13 +13,19 @@ type RD struct {
 
 // Execute runs the given RD instruction
 func (i RD) Execute(ip ivm.InstructionProxy) {
-	val := ip.AddressFetchWord(i.args.Address)
+	var addr ivm.Address
+	if i.args.Register2 == ivm.R0 {
+		addr = i.args.Address
+	} else {
+		addr = ivm.Address(ip.RegisterWord(i.args.Register2))
+	}
+	val := ip.AddressFetchWord(addr)
 	ip.SetRegisterWord(i.args.Register1, val)
 }
 
 // Assembly returns the representation in assembly language
 func (i RD) Assembly() string {
-	return fmt.Sprintf("RD %s", i.args.ASM())
+	return fmt.Sprintf("RD %s", i.args.ASMHex())
 }
 
 // MakeRD makes an RD instruction for the given args

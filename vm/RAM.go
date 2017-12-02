@@ -3,34 +3,58 @@ package vm
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
-	// "strings"
 
+	"../util/logger"
 	"./ivm"
 )
 
 // RAM describes the virtual machine's RAM module.
-type RAM [ivm.RAMNumFrames]ivm.Frame
+// type RAM [ivm.RAMNumFrames]ivm.Frame
+type RAM struct {
+	contents [ivm.RAMNumFrames]ivm.Frame
+	logger   *log.Logger
+}
 
 // MakeRAM makes an initial RAM module for the virtual machine.
 func MakeRAM() RAM {
-	r := RAM{}
-	for fnum := range r {
-		r[fnum] = ivm.MakeFrame()
+	r := RAM{
+		contents: [ivm.RAMNumFrames]ivm.Frame{},
+		logger:   logger.New("ram"),
+	}
+	for fnum := range r.contents {
+		r.contents[fnum] = ivm.MakeFrame()
+	}
+	return r
+}
+
+// MockRAM makes a fake RAM module for testing purposes.
+func MockRAM() RAM {
+	r := RAM{
+		contents: [ivm.RAMNumFrames]ivm.Frame{},
+		logger:   logger.Dummy(),
+	}
+	for fnum := range r.contents {
+		r.contents[fnum] = ivm.MakeFrame()
 	}
 	return r
 }
 
 // AddressFetchWord returns the word value at the given address.
 func (r RAM) AddressFetchWord(addr ivm.Address) ivm.Word {
-	framenum, frameaddr := ivm.FrameComponentsForAddress(addr / 4)
-	return r[framenum][frameaddr]
+	framenum, frameaddr := ivm.FrameComponentsForAddress(addr)
+	return r.contents[framenum][frameaddr]
 }
 
 // AddressWriteWord writes the given word value to the given address.
 func (r *RAM) AddressWriteWord(addr ivm.Address, val ivm.Word) {
-	framenum, frameaddr := ivm.FrameComponentsForAddress(addr / 4)
-	r[framenum][frameaddr] = val
+	framenum, frameaddr := ivm.FrameComponentsForAddress(addr)
+	r.logger.Printf(
+		"*(%v) <- %v [frame: %02X, cell: %1X]",
+		addr, val, framenum, frameaddr,
+	)
+	r.contents[framenum][frameaddr] = val
 }
 
 // AddressFetchUint32 returns the uint32 value at the given address.
@@ -65,12 +89,13 @@ func (r *RAM) AddressWriteBool(addr ivm.Address, val bool) {
 
 // FrameFetch fetches the frame with the given frame number.
 func (r RAM) FrameFetch(frameNum ivm.FrameNumber) ivm.Frame {
-	return r[frameNum]
+	return r.contents[frameNum]
 }
 
 // FrameWrite writes the frame at the given frame number.
 func (r *RAM) FrameWrite(frameNum ivm.FrameNumber, frame ivm.Frame) {
-	copy(r[frameNum][:], frame[:])
+	r.logger.Printf("write to frame %02X: %v", int(frameNum), frame)
+	copy(r.contents[frameNum][:], frame[:])
 }
 
 // Print prints the contents of RAM to Stdout
@@ -80,14 +105,20 @@ func (r RAM) Print() error {
 
 // Fprint prints the contents of RAM to the given writer
 func (r RAM) Fprint(w io.Writer) error {
-	for fnum, frame := range r {
-		fmt.Fprintf(w, "[%02X: ", fnum)
-		frame.Fprint(w)
-		fmt.Fprint(w, "]")
-		if fnum % 2 == 1 {
-			fmt.Fprint(w, "\n")
-		} else {
-			fmt.Fprint(w, "  ")
+	for fnum, frame := range r.contents {
+		var err error
+
+		_, err = fmt.Fprintf(w, "\n[%02X: ", fnum)
+		if err != nil {
+			return err
+		}
+		err = frame.Fprint(w)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprint(w, "]")
+		if err != nil {
+			return err
 		}
 	}
 	return nil
