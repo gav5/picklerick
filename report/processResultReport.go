@@ -49,16 +49,20 @@ func (r processResultReport) Fprint(w io.Writer) error {
 	}
 	if r.p.Status() == process.Terminated {
 		// Completion only listed if it was completed!
-		err = fprintProperty(w, "Completion Time", r.p.Metrics.CompletionTime)
+		err = fprintProperty(w, "Completion Time", r.p.Metrics.CompletionTime.Value())
 		if err != nil {
 			return err
 		}
 	}
-	err = fprintProperty(w, "Wait Time", r.p.Metrics.WaitTime)
+	err = fprintProperty(w, "Wait Time", r.p.Metrics.WaitTime.Value())
 	if err != nil {
 		return err
 	}
-	err = fprintProperty(w, "Cycles Used", r.p.Metrics.Cycles)
+	err = fprintProperty(w, "Cycles Used", r.p.Metrics.Cycles.Value())
+	if err != nil {
+		return err
+	}
+	err = fprintProperty(w, "Max Cache Size", r.p.Metrics.CacheSize.Max())
 	if err != nil {
 		return err
 	}

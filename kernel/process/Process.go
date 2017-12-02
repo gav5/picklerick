@@ -133,6 +133,7 @@ func (p *Process) SetState(val ivm.State) {
 	p.logger.Printf("state currently %#v", p.state)
 
 	(*p).state = val
+	(*p).Metrics.ReactToState(val)
 	p.logger.Printf("state is now %#v", p.state)
 }
 
@@ -156,7 +157,7 @@ func (p *Process) SetStatus(val Status) {
 	}
 	old := p.status
 	(*p).status = val
-	(*p).Metrics.ReactToStatus(p.status, val)
+	(*p).Metrics.ReactToStatus(val)
 	p.logger.Printf("status now %v (was %v)", p.status, old)
 }
 
@@ -282,6 +283,7 @@ func TableHeaders() []string {
 		"Completion Time (ns)",
 		"Wait Time (ns)",
 		"Cycles",
+		"Max Cache Size (frames)",
 	}
 }
 
@@ -297,6 +299,7 @@ func (p Process) TableRow() []string {
 		fmt.Sprintf("%s", p.completionTimeLabel()),
 		fmt.Sprintf("%d", p.Metrics.WaitTime.Value().Nanoseconds()),
 		fmt.Sprintf("%d", p.Metrics.Cycles.Value()),
+		fmt.Sprintf("%d", p.Metrics.CacheSize.Max()),
 	}
 }
 

@@ -2,7 +2,9 @@ package process
 
 import (
 	"../../metric/counter"
+	"../../metric/sequence"
 	"../../metric/stopwatch"
+	"../../vm/ivm"
 )
 
 // Metrics is used to collect information about the process.
@@ -10,8 +12,7 @@ type Metrics struct {
 	WaitTime       stopwatch.Stopwatch
 	CompletionTime stopwatch.Stopwatch
 	Cycles         counter.Counter
-	// RAMUse            fractional.Fractional
-	// CacheUse          fractional.Fractional
+	CacheSize      sequence.Sequence
 }
 
 // MakeMetrics makes the metrics structure.
@@ -20,6 +21,7 @@ func MakeMetrics() Metrics {
 		WaitTime:       stopwatch.Make(),
 		CompletionTime: stopwatch.Make(),
 		Cycles:         counter.Make(),
+		CacheSize:      sequence.Make(),
 	}
 }
 
@@ -28,9 +30,15 @@ type statusTransition struct {
 	to   Status
 }
 
+// ReactToState reacts to a change in state.
+func (m *Metrics) ReactToState(s ivm.State) {
+	// report the cache size
+	(*m).CacheSize.Set(uint32(len(s.Caches)))
+}
+
 // ReactToStatus reacts to a change in state.
-func (m *Metrics) ReactToStatus(o, n Status) {
-	switch n {
+func (m *Metrics) ReactToStatus(s Status) {
+	switch s {
 	case Ready:
 		// we are now waiting and tracking execution
 		(*m).CompletionTime.Start()
