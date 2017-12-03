@@ -15,11 +15,11 @@ type DIV struct {
 func (i DIV) Execute(ip ivm.InstructionProxy) {
 	source1 := ip.RegisterInt32(i.args.Source1)
 	source2 := ip.RegisterInt32(i.args.Source2)
-	if source1 == 0 {
+	if source2 == 0 {
 		ip.Error(DIVbyZero{})
 		return
 	}
-	ip.SetRegisterInt32(i.args.Destination, source2/source1)
+	ip.SetRegisterInt32(i.args.Destination, source1/source2)
 }
 
 // Assembly returns the representation in assembly language
