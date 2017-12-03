@@ -13,8 +13,14 @@ type WR struct {
 
 // Execute runs the given WR instruction
 func (i WR) Execute(ip ivm.InstructionProxy) {
+	var addr ivm.Address
+	if i.args.Register2 == ivm.R0 {
+		addr = i.args.Address
+	} else {
+		addr = ivm.Address(ip.RegisterWord(i.args.Register2))
+	}
 	r1 := ip.RegisterWord(i.args.Register1)
-	ip.AddressWriteWord(i.args.Address, r1)
+	ip.AddressWriteWord(addr, r1)
 }
 
 // Assembly returns the representation in assembly language
