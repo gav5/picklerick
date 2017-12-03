@@ -192,7 +192,7 @@ func (pm *PageManager) Unload(p *process.Process) error {
 
 	// give back the frames to the RAM resource manager
 	// (so it can go to some other process at some point)
-	err := pm.ramRM.Release(frNumbers)
+	err := (*pm).ramRM.Release(frNumbers)
 	if err != nil {
 		pm.logger.Printf(
 			"ERROR releasing frames from process %d: %v",
@@ -208,7 +208,7 @@ func (pm *PageManager) Unload(p *process.Process) error {
 	// remove the corresponing entries from the RAM page table
 	// (this is done this way to ensure an entry wasn't missed)
 	for _, pn := range pgNumbers {
-		delete(p.RAMPageTable, pn)
+		delete((*p).RAMPageTable, pn)
 	}
 	pm.logger.Printf(
 		"deleted pages from process %d: %v",

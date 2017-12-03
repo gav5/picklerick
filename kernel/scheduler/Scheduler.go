@@ -60,28 +60,28 @@ func New(c config.Config, p *pageManager.PageManager, a []program.Program) *Sche
 
 // Tick is used to signal the start of a virtual machine cycle to the kernel.
 // This sets up processes and resources before the next cycle begins.
-func (sched Scheduler) Tick() {
+func (sched *Scheduler) Tick() {
 	sched.logger.Printf("Tick!")
 
 	// run the long-term scheduler
-	sched.Long()
+	(*sched).Long()
 }
 
 // Tock is used to signal the end of a virtual machine cycle to the kernel.
 // This reacts to the events that occured during the cycle.
-func (sched Scheduler) Tock() error {
+func (sched *Scheduler) Tock() error {
 	sched.logger.Printf("Tock!")
 
 	// make sure terminated processes aren't taking up space anymore
 	// (otherwise, there's nothing to fill here and it just stops)
-	err := sched.Clean()
+	err := (*sched).Clean()
 	if err != nil {
 		sched.logger.Printf("ERROR in Tock: %v", err)
 		return err
 	}
 
 	// check back through previous requests and try to fulfill them
-	sched.pm.HandleWaitlist()
+	(*sched.pm).HandleWaitlist()
 
 	// make sure any waiting processes have what they need
 	sched.Each(func(p *process.Process) {
