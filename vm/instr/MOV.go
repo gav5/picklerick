@@ -19,7 +19,8 @@ func (i MOV) Execute(ip ivm.InstructionProxy) {
 
 // Assembly returns the representation in assembly language
 func (i MOV) Assembly() string {
-	return fmt.Sprintf("MOV %s", i.args.ASM())
+	// return fmt.Sprintf("MOV %s", i.args.ASM())
+	return fmt.Sprintf("MOV %s %s", i.args.Destination, i.args.Source2)
 }
 
 // MakeMOV makes an MOV instruction for the given args
